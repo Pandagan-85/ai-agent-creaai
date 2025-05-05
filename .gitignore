@@ -4,4 +4,5 @@ __pycache__/
 .DS_Store
 # Streamlit specific
 .streamlit/secrets.toml
+uv copy.lock
 uv.lock

@@ -1,0 +1,5 @@
+[server]
+enableXsrfProtection = false
+
+[runner]
+requirePipPacakges = ["pysqlite3-binary==0.5.1"]
