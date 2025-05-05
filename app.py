@@ -475,21 +475,21 @@ def main():
         st.toast(f"Cleaned up {cleanup_count} files from previous sessions")
 
     # Tentativo di caricare informazioni sessione precedente (se necessario)
-    if ('company' not in st.session_state or
-        'interviewer' not in st.session_state or
-        'job_position' not in st.session_state or
-            'industry' not in st.session_state):
-        session_file = os.path.join("output", ".session", "last_session.txt")
-        if os.path.exists(session_file):
-            try:
-                with open(session_file, "r") as f:
-                    for line in f:
-                        if "=" in line:
-                            key, value = line.strip().split("=", 1)
-                            if key and value and key in ['company', 'interviewer', 'job_position', 'industry']:
-                                st.session_state[key] = sanitize_input(value)
-            except Exception as e:
-                st.error(f"Error loading session: {e}")
+    # if ('company' not in st.session_state or
+    #     'interviewer' not in st.session_state or
+    #     'job_position' not in st.session_state or
+    #         'industry' not in st.session_state):
+    #     session_file = os.path.join("output", ".session", "last_session.txt")
+    #     if os.path.exists(session_file):
+    #         try:
+    #             with open(session_file, "r") as f:
+    #                 for line in f:
+    #                     if "=" in line:
+    #                         key, value = line.strip().split("=", 1)
+    #                         if key and value and key in ['company', 'interviewer', 'job_position', 'industry']:
+    #                             st.session_state[key] = sanitize_input(value)
+    #         except Exception as e:
+    #             st.error(f"Error loading session: {e}")
 
     st.sidebar.title("Navigation")
     page = st.sidebar.radio(
@@ -607,17 +607,17 @@ def main():
                 st.session_state['industry'] = industry
 
                 # Salva anche in un file per persistere tra sessioni
-                session_dir = os.path.join("output", ".session")
-                os.makedirs(session_dir, exist_ok=True)
-                session_file = os.path.join(session_dir, "last_session.txt")
-                try:
-                    with open(session_file, "w") as f:
-                        f.write(f"company={company}\n")
-                        f.write(f"interviewer={interviewer}\n")
-                        f.write(f"job_position={job_position}\n")
-                        f.write(f"industry={industry}\n")
-                except Exception as e:
-                    st.warning(f"Could not save session info: {e}")
+                # session_dir = os.path.join("output", ".session")
+                # os.makedirs(session_dir, exist_ok=True)
+                # session_file = os.path.join(session_dir, "last_session.txt")
+                # try:
+                #     with open(session_file, "w") as f:
+                #         f.write(f"company={company}\n")
+                #         f.write(f"interviewer={interviewer}\n")
+                #         f.write(f"job_position={job_position}\n")
+                #         f.write(f"industry={industry}\n")
+                # except Exception as e:
+                #     st.warning(f"Could not save session info: {e}")
 
                 num_questions = run_research(
                     company, interviewer, job_position, industry, country, job_description)
