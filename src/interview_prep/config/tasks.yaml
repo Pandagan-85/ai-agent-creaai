@@ -1,14 +1,16 @@
 research_company_task:
   description: >
-    Research about {company}, their position in the sector and recent industry trends.
+    Research about {company} in {country}, their position in the sector and recent industry trends.
     Focus on recent news and developments from the last 12 months (from 2024 to 2025).
+    Consider local market conditions and business culture in {country}.
   expected_output: >
-    A comprehensive report in markdown with bullet points about {company} and its industry.
+    A comprehensive report in markdown with bullet points about {company} and its industry in {country}.
   agent: research_agent
 
 research_person_task:
   description: >
     Research about {interviewer} with a focus on their professional career.
+    Consider any connections to {country} or regional expertise they might have.
   expected_output: >
     A comprehensive report in markdown with bullet points about {interviewer}.
   agent: research_agent
@@ -16,10 +18,11 @@ research_person_task:
 define_questions_task:
   description: >
     Define a list of questions based on the company {company}, job description {job_description}, 
-    and interviewer {interviewer}.
+    interviewer {interviewer}, and considering the cultural context of {country}.
+    Consider local business practices and cultural expectations in {country}.
   expected_output: >
     A list of 20 questions in Markdown format that cover: Culture and Team fit, Job Position Fit, 
-    Background and ways of working, Growth Mindset.
+    Background and ways of working, Growth Mindset, and any country-specific considerations relevant to {country}.
   agent: interview_coach
   context:
     - research_company_task

@@ -1,16 +1,35 @@
-from interview_prep.crew import InterviewPrepCrew
 import os
+import sys
 import re
 import time
 import random
 import streamlit as st
 from dotenv import load_dotenv
-import sys
 
-# Add the src directory to the Python path
-sys.path.append(os.path.abspath("src"))
+# IMPORTANTE: set_page_config DEVE essere la prima istruzione Streamlit
+st.set_page_config(
+    page_title="AI Interview Preparation",
+    page_icon="🎯",
+    layout="wide"
+)
 
-# Now try to import from interview_prep
+# Load environment variables
+load_dotenv()
+
+# Ora facciamo gli import DOPO set_page_config
+try:
+    from src.interview_prep.crew import InterviewPrepCrew
+    st.success("Import riuscito con percorso src.interview_prep")
+except ImportError as e:
+    st.error(f"Errore di importazione: {e}")
+    st.write("Struttura delle directory:")
+    st.code(os.listdir())
+    st.write("Struttura della directory src:")
+    if os.path.exists("src"):
+        st.code(os.listdir("src"))
+    else:
+        st.write("La directory src non esiste!")
+    sys.exit(1)  # Esci se l'import non funziona
 
 # Create a simplified InterviewManager
 
@@ -92,23 +111,30 @@ def load_questions(job_position):
 
     # Try different possible filename patterns
     possible_filenames = [
-        f"{job_position}_report.txt",
+        f"{job_position}_questions.md",  # Prima cerca questo
         f"{job_position}_report.md",
-        f"{job_position}_questions.md"
+        f"{job_position}_report.txt"
     ]
 
     # Sanitize filenames
     possible_filenames = [re.sub(r'[\\/*?:"<>|,]', '_', name)
                           for name in possible_filenames]
 
+    st.write("Cercando file con i seguenti nomi:", possible_filenames)  # Debug
+
     file_path = None
     for filename in possible_filenames:
         path = os.path.join("output", filename)
         if os.path.exists(path):
             file_path = path
+            st.write(f"Trovato file: {path}")  # Debug
             break
 
     if not file_path:
+        st.warning(f"No question files found for {job_position}")
+        # Mostra tutti i file disponibili
+        st.write("Files disponibili nella directory output:")
+        st.code(os.listdir("output"))
         return []
 
     try:
@@ -122,6 +148,10 @@ def load_questions(job_position):
 
         numbered_matches = numbered_pattern.findall(content)
         bullet_matches = bullet_pattern.findall(content)
+
+        # Debug
+        st.write(
+            f"Trovate {len(numbered_matches)} domande numerate e {len(bullet_matches)} con bullet points")
 
         # Use whichever pattern found more matches
         if len(numbered_matches) >= len(bullet_matches):
@@ -255,18 +285,32 @@ def get_feedback(company, interviewer, job_position, industry, question, answer)
 
 def main():
     """Main Streamlit application."""
-    st.set_page_config(
-        page_title="AI Interview Preparation",
-        page_icon="🎯",
-        layout="wide"
-    )
 
     st.title("AI Interview Preparation Assistant")
+
+    # Recupera le informazioni della sessione se necessario
+    if ('company' not in st.session_state or
+        'interviewer' not in st.session_state or
+        'job_position' not in st.session_state or
+            'industry' not in st.session_state):
+
+        # Prova a caricare dalle sessioni precedenti
+        session_file = os.path.join("output", ".session", "last_session.txt")
+        if os.path.exists(session_file):
+            try:
+                with open(session_file, "r") as f:
+                    for line in f:
+                        if "=" in line:
+                            key, value = line.strip().split("=", 1)
+                            if key and value and key in ['company', 'interviewer', 'job_position', 'industry']:
+                                st.session_state[key] = value
+            except Exception as e:
+                st.error(f"Error loading session: {e}")
 
     # Create sidebar for navigation
     st.sidebar.title("Navigation")
     page = st.sidebar.radio(
-        "Select a page:", ["Welcome", "Research", "Practice"])
+        "Select a page:", ["Welcome", "Research", "Practice", "Reports"])
 
     if page == "Welcome":
         st.write("## Welcome to the AI Interview Preparation Assistant!")
@@ -282,6 +326,38 @@ def main():
         """)
 
         st.info("This application uses AI to simulate real interview scenarios. The quality of the preparation depends on the inputs you provide.")
+
+    elif page == "Reports":
+        st.write("## Generated Reports")
+
+        # Trova tutti i file di report
+        report_files = []
+        for file in os.listdir("output"):
+            if file.endswith(".md") and not file.startswith("."):
+                report_files.append(file)
+
+        if not report_files:
+            st.warning("No reports found. Please run the Research phase first.")
+        else:
+            # Dropdowni per selezionare il report
+            selected_report = st.selectbox(
+                "Select a report to view:", report_files)
+
+            if selected_report:
+                file_path = os.path.join("output", selected_report)
+                with open(file_path, "r", encoding="utf-8") as f:
+                    content = f.read()
+
+                # Mostra il report
+                st.markdown(content)
+
+                # Opzione per scaricare
+                st.download_button(
+                    label="Download this report",
+                    data=content,
+                    file_name=selected_report,
+                    mime="text/markdown"
+                )
 
     elif page == "Research":
         st.write("## Research Phase")
@@ -356,8 +432,10 @@ def main():
             return
 
         # Display the question
-        st.write(
-            f"**Question {st.session_state.question_number}:** {st.session_state.current_question}")
+        st.markdown(f"""
+        ### Question {st.session_state.question_number}:
+        **{st.session_state.current_question}**
+        """)
 
         # Answer input
         with st.form("answer_form"):
@@ -402,9 +480,19 @@ def main():
         # Display feedback if available
         if st.session_state.feedback:
             st.write("### Feedback on Your Previous Answer")
+
+            # Usa st.markdown invece di st.write per un rendering migliore
             st.markdown(st.session_state.feedback)
 
-            if st.button("Next Question"):
+            # Aggiungi un pulsante per copiare il feedback negli appunti
+            st.download_button(
+                label="Download Feedback",
+                data=st.session_state.feedback,
+                file_name=f"feedback_question_{st.session_state.question_number-1}.md",
+                mime="text/markdown"
+            )
+
+            if st.button("Next Question", key="next_question"):
                 st.session_state.feedback = ""
                 st.session_state.current_question = None
 

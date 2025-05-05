@@ -13,7 +13,7 @@ MAX_PRACTICE_QUESTIONS = 5  # Maximum number of questions in a practice session
 
 def run_research():
     """Run the research and question generation phase."""
-    # Create interview manager
+    # Crea interview manager
     manager = InterviewManager()
 
     print("\nStarting research and question generation...\n")
@@ -34,6 +34,10 @@ def run_research():
     industry = input("Enter the industry: ")
     while not industry:
         industry = input("Industry is required. Please enter: ")
+
+    country = input("Enter the country (default: Italy): ")
+    if not country:
+        country = "Italy"
 
     # Job description input
     print("\nEnter job description (press Enter twice when finished):")
@@ -56,6 +60,7 @@ def run_research():
     print(f"Interviewer: {interviewer}")
     print(f"Job Position: {job_position}")
     print(f"Industry: {industry}")
+    print(f"Country: {country}")
 
     # Create crew for research only
     crew = InterviewPrepCrew().crew()
@@ -71,6 +76,7 @@ def run_research():
         'interviewer': interviewer,
         'job_position': job_position,
         'industry': industry,
+        'country': country,
         'job_description': job_description
     }
 
@@ -100,7 +106,8 @@ def store_session_info(company, interviewer, job_position, industry):
         "company": company,
         "interviewer": interviewer,
         "job_position": job_position,
-        "industry": industry
+        "industry": industry,
+        "country": country
     }
 
     # Create a simple session file
