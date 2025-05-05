@@ -51,7 +51,6 @@ def sanitize_input(text):
     text = str(text)
 
     # Replace HTML tags with spaces
-    import re
     text = re.sub(r'<[^>]*>', ' ', text)
 
     # Remove potentially dangerous characters
@@ -172,12 +171,16 @@ if not api_keys_valid:
 
         if submit_keys:
             if openai_key:
+                # Sanitize the API key
+                openai_key = sanitize_input(openai_key)
                 os.environ['OPENAI_API_KEY'] = openai_key
                 st.session_state['OPENAI_API_KEY'] = openai_key
                 api_keys_valid = True
                 st.success("OpenAI API Key salvata per questa sessione!")
 
             if serper_key:
+                # Sanitize the API key
+                serper_key = sanitize_input(serper_key)
                 os.environ['SERPER_API_KEY'] = serper_key
                 st.session_state['SERPER_API_KEY'] = serper_key
                 st.success("Serper API Key salvata per questa sessione!")
@@ -244,6 +247,8 @@ class InterviewManager:
 
     def save_company_report(self, content, company):
         """Save the company research report."""
+        # Sanitize company name for filename
+        company = sanitize_input(company)
         file_name = self.sanitize_filename(f"{company}_report.md")
         file_path = os.path.join(self.output_dir, file_name)
         with open(file_path, 'w', encoding='utf-8') as f:
@@ -252,6 +257,8 @@ class InterviewManager:
 
     def save_interviewer_report(self, content, interviewer):
         """Save the interviewer research report."""
+        # Sanitize interviewer name for filename
+        interviewer = sanitize_input(interviewer)
         file_name = self.sanitize_filename(f"{interviewer}_report.md")
         file_path = os.path.join(self.output_dir, file_name)
         with open(file_path, 'w', encoding='utf-8') as f:
@@ -260,6 +267,8 @@ class InterviewManager:
 
     def save_questions(self, content, job_position):
         """Save the interview questions."""
+        # Sanitize job position for filename
+        job_position = sanitize_input(job_position)
         file_name = self.sanitize_filename(f"{job_position}_questions.md")
         file_path = os.path.join(self.output_dir, file_name)
         with open(file_path, 'w', encoding='utf-8') as f:
@@ -285,6 +294,9 @@ if 'current_question' not in st.session_state:
 
 def load_questions(job_position):
     """Load questions from markdown files."""
+    # Sanitize job position for filename
+    job_position = sanitize_input(job_position)
+
     session_dir = get_session_path()  # Usa la directory della sessione
     possible_filenames = [
         f"{job_position}_questions.md",
@@ -432,10 +444,10 @@ def get_feedback(company, interviewer, job_position, industry, question, answer)
             task for task in crew.tasks if task.name in ["feedback_task"]]
 
         inputs = {
-            'company': company,
-            'interviewer': interviewer,
-            'job_position': job_position,
-            'industry': industry,
+            'company': sanitize_input(company),
+            'interviewer': sanitize_input(interviewer),
+            'job_position': sanitize_input(job_position),
+            'industry': sanitize_input(industry),
             'job_position_report': question,
             'user_answer': answer
         }
@@ -475,7 +487,7 @@ def main():
                         if "=" in line:
                             key, value = line.strip().split("=", 1)
                             if key and value and key in ['company', 'interviewer', 'job_position', 'industry']:
-                                st.session_state[key] = value
+                                st.session_state[key] = sanitize_input(value)
             except Exception as e:
                 st.error(f"Error loading session: {e}")
 
@@ -575,7 +587,7 @@ def main():
                 "Job Description", value="", height=300, help="Paste the complete job description here")
             submit_research = st.form_submit_button("Generate Questions")
 
-       if submit_research:
+        if submit_research:
             # Sanitize all inputs before processing
             company = sanitize_input(company)
             interviewer = sanitize_input(interviewer)
@@ -583,7 +595,7 @@ def main():
             industry = sanitize_input(industry)
             country = sanitize_input(country)
             job_description = sanitize_input(job_description)
-            
+
             if not company or not job_position or not industry or not job_description:
                 st.error(
                     "Please fill in all required fields: Company, Job Position, Industry, and Job Description.")
@@ -625,11 +637,11 @@ def main():
                 "No questions loaded. Please load existing questions or run the Research phase first.")
             job_pos_load = st.text_input("Job Position", value=st.session_state.get(
                 'job_position', ''), help="Enter the job position to load questions for")
-            
+
             if st.button("Load Existing Questions") and job_pos_load:
                 # Sanitize input
                 job_pos_load = sanitize_input(job_pos_load)
-                
+
                 st.session_state.questions = load_questions(job_pos_load)
                 if st.session_state.questions:
                     st.success(
@@ -683,7 +695,7 @@ def main():
         if submit_answer:
             # Sanitize the answer input
             answer = sanitize_input(answer)
-            
+
             if not answer:
                 st.error("Please provide an answer before submitting.")
             else:
@@ -710,7 +722,7 @@ def main():
                 st.session_state.question_number += 1
                 st.session_state.current_question = None
                 st.rerun()
-                
+
         if st.session_state.feedback:
             st.write("### Feedback on Your Previous Answer")
             st.markdown(st.session_state.feedback)
