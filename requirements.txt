@@ -67,7 +67,7 @@ hyperframe==6.1.0
 idna==3.10
 importlib-metadata==8.6.1
 importlib-resources==6.5.2
-instructor==0.5.1
+instructor
 ipython==8.36.0
 jedi==0.19.2
 jinja2==3.1.6
