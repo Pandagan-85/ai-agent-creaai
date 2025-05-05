@@ -4,14 +4,11 @@ import random
 import streamlit as st
 import sys
 import os
+import traceback
 
-# Importa e configura pysqlite3 se necessario (lascia questo blocco)
+# Configurazione per sqlite3 se necessario
 __import__('pysqlite3')
 sys.modules['sqlite3'] = sys.modules.pop('pysqlite3')
-
-# NON importare più load_dotenv qui
-# from dotenv import load_dotenv
-
 
 # IMPORTANTE: set_page_config DEVE essere la prima istruzione Streamlit
 st.set_page_config(
@@ -20,9 +17,81 @@ st.set_page_config(
     layout="wide"
 )
 
-# NON caricare più dotenv qui
-# Load environment variables
-# load_dotenv()
+# Gestione combinata delle variabili d'ambiente:
+# 1. Prima tenta di caricare da file .env in ambiente locale
+# 2. Se non disponibile o fallisce, cerca nelle secrets di Streamlit
+
+# Funzione per impostare la variabile d'ambiente da varie fonti
+
+
+def set_api_key(key_name):
+    # Se la chiave è già nell'ambiente, non facciamo nulla
+    if key_name in os.environ:
+        return True
+
+    # Prova a caricare da .env (funziona solo in locale)
+    try:
+        from dotenv import load_dotenv
+        load_dotenv()
+        if key_name in os.environ:
+            return True
+    except ImportError:
+        # Se dotenv non è installato, continuiamo con Streamlit secrets
+        pass
+
+    # Prova a caricare da Streamlit secrets (funziona in produzione)
+    if hasattr(st, 'secrets') and key_name in st.secrets:
+        os.environ[key_name] = st.secrets[key_name]
+        return True
+
+    return False
+
+
+# Imposta le chiavi API necessarie
+openai_key_set = set_api_key('OPENAI_API_KEY')
+serper_key_set = set_api_key('SERPER_API_KEY')
+
+# Verifica se le chiavi necessarie sono disponibili
+api_keys_valid = True
+
+if not openai_key_set:
+    st.error("⚠️ OPENAI_API_KEY non trovata! Aggiungi questa chiave al tuo file .env o ai secrets di Streamlit.")
+    api_keys_valid = False
+
+if not serper_key_set:
+    st.warning(
+        "⚠️ SERPER_API_KEY non trovata! Alcune funzionalità di ricerca potrebbero non funzionare correttamente.")
+
+# Se non abbiamo le chiavi API necessarie, mostriamo un form per inserirle manualmente
+if not api_keys_valid:
+    st.write("## Configurazione API Keys")
+    st.write(
+        "Per utilizzare questa applicazione, è necessario configurare le chiavi API di OpenAI.")
+
+    with st.form("api_keys_form"):
+        openai_key = st.text_input(
+            "OpenAI API Key", type="password", help="La tua chiave API di OpenAI")
+        serper_key = st.text_input("Serper API Key (opzionale)", type="password",
+                                   help="La tua chiave API di Serper per la ricerca web")
+        submit_keys = st.form_submit_button("Salva API Keys")
+
+        if submit_keys:
+            if openai_key:
+                os.environ['OPENAI_API_KEY'] = openai_key
+                st.session_state['OPENAI_API_KEY'] = openai_key
+                api_keys_valid = True
+                st.success("OpenAI API Key salvata per questa sessione!")
+
+            if serper_key:
+                os.environ['SERPER_API_KEY'] = serper_key
+                st.session_state['SERPER_API_KEY'] = serper_key
+                st.success("Serper API Key salvata per questa sessione!")
+
+            st.rerun()
+
+# Continua solo se abbiamo le API keys
+if not api_keys_valid:
+    st.stop()
 
 # Ora facciamo gli import DOPO set_page_config
 try:
@@ -82,10 +151,6 @@ class InterviewManager:
         with open(file_path, 'w', encoding='utf-8') as f:
             f.write(content)
         return file_path
-
-# NON caricare più dotenv qui
-# Load environment variables
-# load_dotenv()
 
 
 # Constants
@@ -178,60 +243,116 @@ def run_research(company, interviewer, job_position, industry, country, job_desc
     """Run the research and question generation phase."""
     os.makedirs("output", exist_ok=True)
     manager = InterviewManager()
-    crew = InterviewPrepCrew().crew()
-    crew.tasks = [task for task in crew.tasks if task.name in [
-        "research_company_task",
-        "research_person_task",
-        "define_questions_task"
-    ]]
-    inputs = {
-        'company': company,
-        'interviewer': interviewer,
-        'job_position': job_position,
-        'industry': industry,
-        'country': country,
-        'job_description': job_description
-    }
-    with st.spinner("Researching and generating questions... This may take several minutes."):
-        result = crew.kickoff(inputs=inputs)
-    for i, task_output in enumerate(result.tasks_output):
-        if i == 0:
-            company_file = manager.save_company_report(
-                task_output.raw, company)
-        elif i == 1:
-            interviewer_file = manager.save_interviewer_report(
-                task_output.raw, interviewer)
-        elif i == 2:
-            questions_file = manager.save_questions(
-                task_output.raw, job_position)
+
+    try:
+        crew = InterviewPrepCrew().crew()
+        crew.tasks = [task for task in crew.tasks if task.name in [
+            "research_company_task",
+            "research_person_task",
+            "define_questions_task"
+        ]]
+
+        inputs = {
+            'company': company,
+            'interviewer': interviewer,
+            'job_position': job_position,
+            'industry': industry,
+            'country': country,
+            'job_description': job_description
+        }
+
+        with st.spinner("Researching and generating questions... This may take several minutes."):
+            result = crew.kickoff(inputs=inputs)
+
+        for i, task_output in enumerate(result.tasks_output):
+            if i == 0:
+                company_file = manager.save_company_report(
+                    task_output.raw, company)
+            elif i == 1:
+                interviewer_file = manager.save_interviewer_report(
+                    task_output.raw, interviewer)
+            elif i == 2:
+                questions_file = manager.save_questions(
+                    task_output.raw, job_position)
+            else:
+                continue
+
+        st.session_state.questions = load_questions(job_position)
+        st.session_state.asked_questions = set()
+        st.session_state.question_number = 1
+        return len(st.session_state.questions)
+
+    except Exception as e:
+        error_message = str(e)
+        error_traceback = traceback.format_exc()
+
+        # Controlla se è un errore di autenticazione
+        if "AuthenticationError" in error_message or "Incorrect API key" in error_message:
+            st.error(
+                "⚠️ Errore di autenticazione API: La chiave API di OpenAI non è valida o è scaduta.")
+            st.warning(
+                "Per favore, controlla la tua chiave API di OpenAI e assicurati che sia corretta e attiva.")
+            # Rimuovi la chiave dalla sessione così l'utente può inserirla di nuovo
+            if 'OPENAI_API_KEY' in st.session_state:
+                del st.session_state['OPENAI_API_KEY']
+            os.environ.pop('OPENAI_API_KEY', None)
+            st.rerun()
         else:
-            continue
-    st.session_state.questions = load_questions(job_position)
-    st.session_state.asked_questions = set()
-    st.session_state.question_number = 1
-    return len(st.session_state.questions)
+            st.error(
+                f"Si è verificato un errore durante la ricerca: {error_message}")
+            with st.expander("Dettagli errore"):
+                st.code(error_traceback)
+
+        return 0
 
 
 def get_feedback(company, interviewer, job_position, industry, question, answer):
     """Get AI feedback on the answer."""
-    crew = InterviewPrepCrew().crew()
-    crew.tasks = [task for task in crew.tasks if task.name in [
-        "interview_prep_task",
-        "feedback_task"
-    ]]
-    inputs = {
-        'company': company,
-        'interviewer': interviewer,
-        'job_position': job_position,
-        'industry': industry,
-        'job_position_report': question,  # Assuming this is where the question text goes
-        'user_answer': answer
-    }
-    with st.spinner("Generating feedback..."):
-        result = crew.kickoff(inputs=inputs)
-    save_feedback(st.session_state.question_number,
-                  question, answer, result.raw)
-    return result.raw
+    try:
+        crew = InterviewPrepCrew().crew()
+        crew.tasks = [task for task in crew.tasks if task.name in [
+            "interview_prep_task",
+            "feedback_task"
+        ]]
+
+        inputs = {
+            'company': company,
+            'interviewer': interviewer,
+            'job_position': job_position,
+            'industry': industry,
+            'job_position_report': question,  # Assuming this is where the question text goes
+            'user_answer': answer
+        }
+
+        with st.spinner("Generating feedback..."):
+            result = crew.kickoff(inputs=inputs)
+
+        save_feedback(st.session_state.question_number,
+                      question, answer, result.raw)
+        return result.raw
+
+    except Exception as e:
+        error_message = str(e)
+        error_traceback = traceback.format_exc()
+
+        # Controlla se è un errore di autenticazione
+        if "AuthenticationError" in error_message or "Incorrect API key" in error_message:
+            st.error(
+                "⚠️ Errore di autenticazione API: La chiave API di OpenAI non è valida o è scaduta.")
+            st.warning(
+                "Per favore, controlla la tua chiave API di OpenAI e assicurati che sia corretta e attiva.")
+            # Rimuovi la chiave dalla sessione così l'utente può inserirla di nuovo
+            if 'OPENAI_API_KEY' in st.session_state:
+                del st.session_state['OPENAI_API_KEY']
+            os.environ.pop('OPENAI_API_KEY', None)
+            st.rerun()
+        else:
+            st.error(
+                f"Si è verificato un errore durante la generazione del feedback: {error_message}")
+            with st.expander("Dettagli errore"):
+                st.code(error_traceback)
+
+        return "Si è verificato un errore durante la generazione del feedback. Per favore, prova di nuovo."
 
 
 def main():

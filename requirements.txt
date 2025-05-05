@@ -37,7 +37,7 @@ docker==7.1.0
 docstring-parser==0.16
 durationpy==0.9
 embedchain==0.1.128
-et-xmlfile==2.0.0
+et-xmlfile==1.0.0
 exceptiongroup==1.2.2
 executing==2.2.0
 fastapi==0.115.12
@@ -65,8 +65,7 @@ hyperframe==6.1.0
 idna==3.10
 importlib-metadata==8.6.1
 importlib-resources==6.5.2
-instructor==1.7.9
--e file:///Users/pandagan/workspace/projects/interview_prep
+instructor==0.5.1
 ipython==8.36.0
 jedi==0.19.2
 jinja2==3.1.6
@@ -208,3 +207,4 @@ yarl==1.20.0
 zipp==3.21.0
 zstandard==0.23.0
 pysqlite3-binary
+setuptools>=65.0.0
