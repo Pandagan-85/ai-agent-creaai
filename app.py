@@ -6,9 +6,13 @@ import sys
 import os
 import traceback
 
-# Configurazione per sqlite3 se necessario
-__import__('pysqlite3')
-sys.modules['sqlite3'] = sys.modules.pop('pysqlite3')
+# Configurazione per sqlite3 se necessario (per ChromaDB su Streamlit Cloud)
+try:
+    __import__('pysqlite3')
+    sys.modules['sqlite3'] = sys.modules.pop('pysqlite3')
+except ImportError:
+    # Continue with the default sqlite3
+    pass
 
 # IMPORTANTE: set_page_config DEVE essere la prima istruzione Streamlit
 st.set_page_config(
@@ -93,20 +97,38 @@ if not api_keys_valid:
 if not api_keys_valid:
     st.stop()
 
-# Ora facciamo gli import DOPO set_page_config
+# Add current directory to path to help with imports
+project_root = os.path.abspath(os.path.dirname(__file__))
+if project_root not in sys.path:
+    sys.path.insert(0, project_root)
+
+# Add src directory to path if it exists
+src_path = os.path.join(project_root, "src")
+if os.path.exists(src_path) and src_path not in sys.path:
+    sys.path.insert(0, src_path)
+
+# Ora facciamo gli import DOPO set_page_config e setup path
 try:
     from src.interview_prep.crew import InterviewPrepCrew
     st.success("Import riuscito con percorso src.interview_prep")
 except ImportError as e:
-    st.error(f"Errore di importazione: {e}")
-    st.write("Struttura delle directory:")
-    st.code(os.listdir())
-    st.write("Struttura della directory src:")
-    if os.path.exists("src"):
-        st.code(os.listdir("src"))
-    else:
-        st.write("La directory src non esiste!")
-    sys.exit(1)  # Esci se l'import non funziona
+    try:
+        # Try direct import if package is installed
+        from interview_prep.crew import InterviewPrepCrew
+        st.success("Import riuscito con percorso interview_prep")
+    except ImportError as e:
+        st.error(f"Errore di importazione: {e}")
+        st.write("Struttura delle directory:")
+        st.code(os.listdir())
+        st.write("Struttura della directory src:")
+        if os.path.exists("src"):
+            st.code(os.listdir("src"))
+        else:
+            st.write("La directory src non esiste!")
+        # Show Python path for debugging
+        st.write("Python path:")
+        st.code("\n".join(sys.path))
+        st.stop()  # Stop execution if import fails
 
 # Create a simplified InterviewManager
 
