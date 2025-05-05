@@ -16,6 +16,15 @@ import sys
 import os
 import traceback
 
+# Gestione delle sessioni - aggiungi questo dopo gli import
+import uuid
+
+# Genera un ID di sessione univoco se non esiste già
+if 'session_id' not in st.session_state:
+    st.session_state.session_id = str(uuid.uuid4())
+    # time dovrebbe essere già importato
+    st.session_state.session_start_time = time.time()
+
 # IMPORTANTE: set_page_config MUST be the first Streamlit instruction
 st.set_page_config(
     page_title="AI Interview Preparation",
@@ -28,6 +37,20 @@ st.set_page_config(
 # 2. Se non disponibile o fallisce, cerca nelle secrets di Streamlit
 
 # Funzione per impostare la variabile d'ambiente da varie fonti
+
+# Funzione per ottenere il percorso specifico della sessione
+
+
+def get_session_path():
+    """Ottiene il percorso della directory specifica per questa sessione."""
+    base_dir = "output"
+    session_dir = os.path.join(base_dir, st.session_state.session_id)
+
+    # Crea la directory se non esiste
+    os.makedirs(session_dir, exist_ok=True)
+    os.makedirs(os.path.join(session_dir, "feedback"), exist_ok=True)
+
+    return session_dir
 
 
 def set_api_key(key_name):
@@ -139,7 +162,8 @@ class InterviewManager:
     """Manager for the interview process."""
 
     def __init__(self, output_dir="output"):
-        self.output_dir = output_dir
+        self.output_dir = get_session_path()
+
         os.makedirs(output_dir, exist_ok=True)
         os.makedirs(os.path.join(output_dir, "feedback"), exist_ok=True)
 
@@ -195,7 +219,7 @@ if 'current_question' not in st.session_state:
 
 def load_questions(job_position):
     """Load questions from markdown files."""
-    os.makedirs("output", exist_ok=True)
+    session_dir = get_session_path()  # Usa la directory della sessione
     possible_filenames = [
         f"{job_position}_questions.md",
         f"{job_position}_report.md",
@@ -206,15 +230,17 @@ def load_questions(job_position):
     st.write("Cercando file con i seguenti nomi:", possible_filenames)  # Debug
     file_path = None
     for filename in possible_filenames:
-        path = os.path.join("output", filename)
+        # Usa session_dir invece di "output"
+        path = os.path.join(session_dir, filename)
         if os.path.exists(path):
             file_path = path
             st.write(f"Trovato file: {path}")  # Debug
             break
     if not file_path:
         st.warning(f"No question files found for {job_position}")
-        st.write("Files disponibili nella directory output:")
-        st.code(os.listdir("output"))
+        st.write("Files disponibili nella directory della sessione:")
+        # Elenca i file nella directory della sessione
+        st.code(os.listdir(session_dir))
         return []
     try:
         with open(file_path, 'r', encoding='utf-8') as f:
@@ -251,7 +277,8 @@ def get_random_question():
 
 def save_feedback(question_num, question, answer, feedback):
     """Save feedback for a question."""
-    feedback_dir = os.path.join("output", "feedback")
+    session_dir = get_session_path()  # Usa la directory della sessione
+    feedback_dir = os.path.join(session_dir, "feedback")
     os.makedirs(feedback_dir, exist_ok=True)
     file_name = f"question_{question_num}_feedback.md"
     file_path = os.path.join(feedback_dir, file_name)
@@ -384,6 +411,36 @@ def main():
     st.sidebar.title("Navigation")
     page = st.sidebar.radio(
         "Select a page:", ["Welcome", "Research", "Practice", "Reports"])
+    st.sidebar.markdown("---")
+    st.sidebar.subheader("Session Management")
+
+    # Mostra informazioni sulla sessione corrente
+    st.sidebar.info(f"Session ID: {st.session_state.session_id[:8]}...")
+
+    if st.sidebar.button("End Session & Clear Data"):
+        session_dir = os.path.join("output", st.session_state.session_id)
+        if os.path.exists(session_dir):
+            import shutil
+            shutil.rmtree(session_dir)
+
+        # Crea un nuovo ID di sessione
+        st.session_state.session_id = str(uuid.uuid4())
+        st.session_state.session_start_time = time.time()
+
+        # Resetta le variabili di sessione
+        st.session_state.questions = []
+        st.session_state.asked_questions = set()
+        st.session_state.feedback = ""
+        st.session_state.question_number = 1
+        st.session_state.current_question = None
+
+        # Ricrea le directory della nuova sessione
+        os.makedirs(get_session_path(), exist_ok=True)
+        os.makedirs(os.path.join(get_session_path(),
+                    "feedback"), exist_ok=True)
+
+        st.sidebar.success("Session ended and data cleared!")
+        st.rerun()
 
     if page == "Welcome":
         st.write("## Welcome to the AI Interview Preparation Assistant!")
