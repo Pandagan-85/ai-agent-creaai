@@ -15,6 +15,7 @@ import streamlit as st
 import sys
 import os
 import traceback
+import shutil
 
 # Gestione delle sessioni - aggiungi questo dopo gli import
 import uuid
@@ -32,12 +33,6 @@ st.set_page_config(
     layout="wide"
 )
 
-# Gestione combinata delle variabili d'ambiente:
-# 1. Prima tenta di caricare da file .env in ambiente locale
-# 2. Se non disponibile o fallisce, cerca nelle secrets di Streamlit
-
-# Funzione per impostare la variabile d'ambiente da varie fonti
-
 # Funzione per ottenere il percorso specifico della sessione
 
 
@@ -51,6 +46,48 @@ def get_session_path():
     os.makedirs(os.path.join(session_dir, "feedback"), exist_ok=True)
 
     return session_dir
+
+
+def cleanup_markdown_files():
+    """
+    Clean up all generated Markdown files from previous sessions.
+    Only keeps files from the current session.
+    """
+    # Get current session directory
+    current_session_dir = get_session_path()
+
+    # Get the parent directory (output)
+    output_dir = os.path.dirname(current_session_dir)
+
+    # Only process if output directory exists
+    if not os.path.exists(output_dir):
+        return 0
+
+    # Count of removed files
+    removed_count = 0
+
+    try:
+        # Iterate through all files in the output directory
+        for item in os.listdir(output_dir):
+            item_path = os.path.join(output_dir, item)
+
+            # Skip the current session directory and .session directory
+            if item == os.path.basename(current_session_dir) or item == ".session":
+                continue
+
+            # Remove MD files in root output directory
+            if os.path.isfile(item_path) and item.endswith('.md'):
+                os.remove(item_path)
+                removed_count += 1
+
+            # Remove session directories that aren't the current one
+            if os.path.isdir(item_path) and item != os.path.basename(current_session_dir) and item != ".session":
+                shutil.rmtree(item_path)
+                removed_count += 1
+    except Exception as e:
+        print(f"Error during cleanup: {e}")
+
+    return removed_count
 
 
 def set_api_key(key_name):
@@ -391,6 +428,11 @@ def main():
     """Main Streamlit application."""
     st.title("AI Interview Preparation Assistant")
 
+    # Clean up markdown files from previous sessions
+    cleanup_count = cleanup_markdown_files()
+    if cleanup_count > 0:
+        st.toast(f"Cleaned up {cleanup_count} files from previous sessions")
+
     # Tentativo di caricare informazioni sessione precedente (se necessario)
     if ('company' not in st.session_state or
         'interviewer' not in st.session_state or
@@ -422,6 +464,9 @@ def main():
         if os.path.exists(session_dir):
             import shutil
             shutil.rmtree(session_dir)
+
+        # Clean up all markdown files
+        cleanup_markdown_files()
 
         # Crea un nuovo ID di sessione
         st.session_state.session_id = str(uuid.uuid4())
@@ -458,9 +503,11 @@ def main():
 
     elif page == "Reports":
         st.write("## Generated Reports")
+        # Use the session directory for reports
+        session_dir = get_session_path()
         report_files = []
-        if os.path.exists("output"):
-            for file in os.listdir("output"):
+        if os.path.exists(session_dir):
+            for file in os.listdir(session_dir):
                 if file.endswith(".md") and not file.startswith("."):
                     report_files.append(file)
 
@@ -470,7 +517,7 @@ def main():
             selected_report = st.selectbox(
                 "Select a report to view:", report_files)
             if selected_report:
-                file_path = os.path.join("output", selected_report)
+                file_path = os.path.join(session_dir, selected_report)
                 with open(file_path, "r", encoding="utf-8") as f:
                     content = f.read()
                 st.markdown(content)
@@ -647,4 +694,6 @@ def main():
 
 
 if __name__ == "__main__":
+    # Clean up markdown files from previous sessions at startup
+    cleanup_markdown_files()
     main()
