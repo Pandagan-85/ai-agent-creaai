@@ -1,0 +1,49 @@
+research_company_task:
+  description: >
+    Research about {company}, their position in the sector and recent industry trends.
+    Focus on recent news and developments from the last 12 months (from 2024 to 2025).
+  expected_output: >
+    A comprehensive report in markdown with bullet points about {company} and its industry.
+  agent: research_agent
+
+research_person_task:
+  description: >
+    Research about {interviewer} with a focus on their professional career.
+  expected_output: >
+    A comprehensive report in markdown with bullet points about {interviewer}.
+  agent: research_agent
+
+define_questions_task:
+  description: >
+    Define a list of questions based on the company {company}, job description {job_description}, 
+    and interviewer {interviewer}.
+  expected_output: >
+    A list of 20 questions in Markdown format that cover: Culture and Team fit, Job Position Fit, 
+    Background and ways of working, Growth Mindset.
+  agent: interview_coach
+  context:
+    - research_company_task
+    - research_person_task
+  output_file: output/interview_questions.md
+
+interview_prep_task:
+  description: >
+    Ask a question from the list of prepared questions to the user and wait for their response.
+  expected_output: >
+    A single interview question presented to the user, followed by wait for human input.
+  agent: interview_agent
+  human_input: true
+  context:
+    - define_questions_task
+
+feedback_task:
+  description: >
+    Give feedback to the user on their answer to the interview question.
+  expected_output: >
+    Markdown-formatted feedback detailing what was good, what could be improved, 
+    and how to take the answer to the next level.
+  agent: interview_coach
+  human_input: true
+  context:
+    - interview_prep_task
+  output_file: output/feedback.md
