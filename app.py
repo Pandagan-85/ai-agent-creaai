@@ -607,17 +607,17 @@ def main():
                 st.session_state['industry'] = industry
 
                 # Salva anche in un file per persistere tra sessioni
-                # session_dir = os.path.join("output", ".session")
-                # os.makedirs(session_dir, exist_ok=True)
-                # session_file = os.path.join(session_dir, "last_session.txt")
-                # try:
-                #     with open(session_file, "w") as f:
-                #         f.write(f"company={company}\n")
-                #         f.write(f"interviewer={interviewer}\n")
-                #         f.write(f"job_position={job_position}\n")
-                #         f.write(f"industry={industry}\n")
-                # except Exception as e:
-                #     st.warning(f"Could not save session info: {e}")
+                session_dir = os.path.join("output", ".session")
+                os.makedirs(session_dir, exist_ok=True)
+                session_file = os.path.join(session_dir, "last_session.txt")
+                try:
+                    with open(session_file, "w") as f:
+                        f.write(f"company={company}\n")
+                        f.write(f"interviewer={interviewer}\n")
+                        f.write(f"job_position={job_position}\n")
+                        f.write(f"industry={industry}\n")
+                except Exception as e:
+                    st.warning(f"Could not save session info: {e}")
 
                 num_questions = run_research(
                     company, interviewer, job_position, industry, country, job_description)
