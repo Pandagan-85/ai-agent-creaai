@@ -334,49 +334,30 @@ def get_feedback(company, interviewer, job_position, industry, question, answer)
     """Get AI feedback on the answer."""
     try:
         crew = InterviewPrepCrew().crew()
-        crew.tasks = [task for task in crew.tasks if task.name in [
-            "interview_prep_task",
-            "feedback_task"
-        ]]
+        # Usa solo le task necessarie
+        crew.tasks = [
+            task for task in crew.tasks if task.name in ["feedback_task"]]
 
         inputs = {
             'company': company,
             'interviewer': interviewer,
             'job_position': job_position,
             'industry': industry,
-            'job_position_report': question,  # Assuming this is where the question text goes
+            'job_position_report': question,
             'user_answer': answer
         }
 
         with st.spinner("Generating feedback..."):
             result = crew.kickoff(inputs=inputs)
 
+        # Salva e restituisci il feedback
         save_feedback(st.session_state.question_number,
                       question, answer, result.raw)
         return result.raw
 
     except Exception as e:
-        error_message = str(e)
-        error_traceback = traceback.format_exc()
-
-        # Controlla se è un errore di autenticazione
-        if "AuthenticationError" in error_message or "Incorrect API key" in error_message:
-            st.error(
-                "⚠️ Errore di autenticazione API: La chiave API di OpenAI non è valida o è scaduta.")
-            st.warning(
-                "Per favore, controlla la tua chiave API di OpenAI e assicurati che sia corretta e attiva.")
-            # Rimuovi la chiave dalla sessione così l'utente può inserirla di nuovo
-            if 'OPENAI_API_KEY' in st.session_state:
-                del st.session_state['OPENAI_API_KEY']
-            os.environ.pop('OPENAI_API_KEY', None)
-            st.rerun()
-        else:
-            st.error(
-                f"Si è verificato un errore durante la generazione del feedback: {error_message}")
-            with st.expander("Dettagli errore"):
-                st.code(error_traceback)
-
-        return "Si è verificato un errore durante la generazione del feedback. Per favore, prova di nuovo."
+        st.error(f"Error generating feedback: {e}")
+        return f"Si è verificato un errore durante la generazione del feedback: {str(e)}"
 
 
 def main():

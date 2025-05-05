@@ -211,7 +211,13 @@ def run_practice():
             return
 
         # Get feedback
+        # Get feedback
         print("\nGetting feedback on your answer...")
+
+        # Crea una crew solo per il feedback
+        feedback_crew = InterviewPrepCrew().crew()
+        feedback_crew.tasks = [
+            task for task in feedback_crew.tasks if task.name == "feedback_task"]
 
         inputs = {
             'company': company,
@@ -223,14 +229,14 @@ def run_practice():
         }
 
         try:
-            result = crew.kickoff(inputs=inputs)
+            # Esegui solo la task di feedback
+            result = feedback_crew.kickoff(inputs=inputs)
 
             print("\n=== Feedback ===\n")
             print(result.raw)
 
-            # Save feedback
+            # Salva feedback
             manager.save_feedback(question_num, question, answer, result.raw)
-
         except Exception as e:
             print(f"Error in feedback generation: {e}")
 

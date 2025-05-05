@@ -1,0 +1,4 @@
+company=digitalmakers s.r.l.
+interviewer=Francesco Anzelmo
+job_position=Frontend Developer
+industry=Marketing Agency
