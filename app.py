@@ -1,3 +1,11 @@
+# Configurazione per sqlite3 se necessario (per ChromaDB su Streamlit Cloud)
+try:
+    __import__('pysqlite3')
+    sys.modules['sqlite3'] = sys.modules.pop('pysqlite3')
+except ImportError:
+    # Continue with the default sqlite3
+    pass
+
 import re
 import time
 import random
@@ -6,13 +14,6 @@ import sys
 import os
 import traceback
 
-# Configurazione per sqlite3 se necessario (per ChromaDB su Streamlit Cloud)
-try:
-    __import__('pysqlite3')
-    sys.modules['sqlite3'] = sys.modules.pop('pysqlite3')
-except ImportError:
-    # Continue with the default sqlite3
-    pass
 
 # IMPORTANTE: set_page_config DEVE essere la prima istruzione Streamlit
 st.set_page_config(
