@@ -28,22 +28,27 @@ define_questions_task:
 
 interview_prep_task:
   description: >
-    Ask a question from the list of prepared questions to the user and wait for their response.
+    Ask the following question to the user and analyze their response:
+
+    {job_position_report}
   expected_output: >
-    A single interview question presented to the user, followed by wait for human input.
+    The question asked and the user's response.
   agent: interview_agent
   human_input: true
-  context:
-    - define_questions_task
 
 feedback_task:
   description: >
-    Give feedback to the user on their answer to the interview question.
+    Review the user's response to the interview question:
+
+    Question: {job_position_report}
+    User's Answer: {user_answer}
+
+    Provide constructive feedback on:
+    1. What was good about the answer
+    2. What could be improved
+    3. Specific suggestions to enhance the response
+    4. Alternative ways to approach the question
   expected_output: >
-    Markdown-formatted feedback detailing what was good, what could be improved, 
-    and how to take the answer to the next level.
+    Detailed feedback on the user's answer with specific points for improvement and alternative approaches.
   agent: interview_coach
-  human_input: true
-  context:
-    - interview_prep_task
   output_file: output/feedback.md

@@ -7,9 +7,6 @@ research_agent:
     You are a specialized researcher who excels at uncovering detailed information about 
     companies and individuals. Your goal is to gather comprehensive data that will help 
     prepare candidates for interviews.
-  tools:
-    - SerperDevTool
-    - ScrapeWebsiteTool
 
 interview_coach:
   role: >
@@ -26,6 +23,6 @@ interview_agent:
   role: >
     Interviewer Agent
   goal: >
-    Ask all question from {job_position_report} to the user
+    Ask interview questions to the user
   backstory: >
-    You are an expert in job interviews in companies like {company}
+    You are an expert interviewer at companies like {company}
