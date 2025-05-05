@@ -1,15 +1,17 @@
+__import__('pysqlite3')
 import sys
+sys.modules['sqlite3'] = sys.modules.pop('pysqlite3')
+
+
+from dotenv import load_dotenv
+import streamlit as st
+import random
+import time
+import re
 import os
 
-import re
-import time
-import random
-import streamlit as st
-from dotenv import load_dotenv
 
-# Fix for sqlite3 version issue - MUST be at the very top before any other imports
-__import__('pysqlite3')
-sys.modules['sqlite3'] = sys.modules.pop('pysqlite3')
+
 
 # IMPORTANTE: set_page_config DEVE essere la prima istruzione Streamlit
 st.set_page_config(
