@@ -1,24 +1,22 @@
-import sys
-import importlib.util
-
-# Check if pysqlite3 is available and use it to replace sqlite3
-if importlib.util.find_spec("pysqlite3"):
-    import pysqlite3
-    sys.modules["sqlite3"] = pysqlite3
+# CRITICAL: SQLite fix - MUST be at the very top before ANY other imports
+try:
+    __import__('pysqlite3')
+    import sys
+    sys.modules['sqlite3'] = sys.modules.pop('pysqlite3')
     print("Successfully replaced sqlite3 with pysqlite3")
-else:
+except ImportError:
     print("pysqlite3 not found, using system sqlite3 which might cause issues")
 
-# Now proceed with other imports
+# Now continue with normal imports
 import re
 import time
 import random
 import streamlit as st
+import sys
 import os
 import traceback
 
-
-# IMPORTANTE: set_page_config DEVE essere la prima istruzione Streamlit
+# IMPORTANTE: set_page_config MUST be the first Streamlit instruction
 st.set_page_config(
     page_title="AI Interview Preparation",
     page_icon="🎯",
