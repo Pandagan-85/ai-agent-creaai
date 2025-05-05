@@ -1,16 +1,19 @@
-# Configurazione per sqlite3 se necessario (per ChromaDB su Streamlit Cloud)
-try:
-    __import__('pysqlite3')
-    sys.modules['sqlite3'] = sys.modules.pop('pysqlite3')
-except ImportError:
-    # Continue with the default sqlite3
-    pass
+import sys
+import importlib.util
 
+# Check if pysqlite3 is available and use it to replace sqlite3
+if importlib.util.find_spec("pysqlite3"):
+    import pysqlite3
+    sys.modules["sqlite3"] = pysqlite3
+    print("Successfully replaced sqlite3 with pysqlite3")
+else:
+    print("pysqlite3 not found, using system sqlite3 which might cause issues")
+
+# Now proceed with other imports
 import re
 import time
 import random
 import streamlit as st
-import sys
 import os
 import traceback
 
