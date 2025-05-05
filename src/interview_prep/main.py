@@ -97,10 +97,10 @@ def run_research():
     print("Check the output directory for results.")
 
     # Store these values for the practice session
-    store_session_info(company, interviewer, job_position, industry)
+    store_session_info(company, interviewer, job_position, industry, country)
 
 
-def store_session_info(company, interviewer, job_position, industry):
+def store_session_info(company, interviewer, job_position, industry, country):
     """Store session information for the practice session."""
     session_info = {
         "company": company,

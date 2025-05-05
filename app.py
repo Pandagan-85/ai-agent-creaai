@@ -202,7 +202,7 @@ def save_feedback(question_num, question, answer, feedback):
     return file_path
 
 
-def run_research(company, interviewer, job_position, industry, job_description):
+def run_research(company, interviewer, job_position, industry, country, job_description):
     """Run the research and question generation phase."""
     # Create output directories
     os.makedirs("output", exist_ok=True)
@@ -224,6 +224,7 @@ def run_research(company, interviewer, job_position, industry, job_description):
         'interviewer': interviewer,
         'job_position': job_position,
         'industry': industry,
+        'country': country,
         'job_description': job_description
     }
 
@@ -372,6 +373,8 @@ def main():
                 "Job Position", value="", help="Enter the specific job position you're applying for")
             industry = st.text_input(
                 "Industry", value="", help="Enter the industry or sector of the company")
+            country = st.text_input(
+                "Country", value="Italy", help="Enter the country where the job is located")
             job_description = st.text_area(
                 "Job Description", value="", height=300, help="Paste the complete job description here")
 
@@ -383,7 +386,7 @@ def main():
                     "Please fill in all required fields: Company, Job Position, Industry, and Job Description.")
             else:
                 num_questions = run_research(
-                    company, interviewer, job_position, industry, job_description)
+                    company, interviewer, job_position, industry, country, job_description)
                 if num_questions > 0:
                     st.success(
                         f"Research completed! Generated {num_questions} interview questions.")

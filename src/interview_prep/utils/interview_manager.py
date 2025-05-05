@@ -2,7 +2,7 @@ import os
 import re
 import json
 import random
-from typing import List, Dict
+from typing import List, Dict, Optional, Set
 
 
 class InterviewManager:
@@ -10,12 +10,14 @@ class InterviewManager:
 
     def __init__(self, output_dir="output"):
         self.output_dir = output_dir
-        self.questions = []
-        self.asked_questions = set()  # Keep track of questions we've already asked
+        self.questions: List[str] = []
+        # Keep track of questions we've already asked
+        self.asked_questions: Set[int] = set()
         os.makedirs(output_dir, exist_ok=True)
         os.makedirs(os.path.join(output_dir, "feedback"), exist_ok=True)
+        os.makedirs(os.path.join(output_dir, ".session"), exist_ok=True)
 
-    def sanitize_filename(self, name):
+    def sanitize_filename(self, name: str) -> str:
         """Remove or replace invalid characters for filenames."""
         # Replace problematic characters with underscore
         sanitized = re.sub(r'[\\/*?:"<>|,]', '_', str(name))
@@ -27,13 +29,13 @@ class InterviewManager:
             sanitized = sanitized[:max_length]
         return sanitized
 
-    def load_questions(self, job_position):
+    def load_questions(self, job_position: str) -> bool:
         """Load questions from the markdown file."""
         # Try both possible filename patterns
         possible_filenames = [
-            self.sanitize_filename(f"{job_position}_report.txt"),
+            self.sanitize_filename(f"{job_position}_questions.md"),
             self.sanitize_filename(f"{job_position}_report.md"),
-            self.sanitize_filename(f"{job_position}_questions.md")
+            self.sanitize_filename(f"{job_position}_report.txt")
         ]
 
         file_path = None
@@ -41,29 +43,49 @@ class InterviewManager:
             path = os.path.join(self.output_dir, filename)
             if os.path.exists(path):
                 file_path = path
+                print(f"Found questions file: {path}")
                 break
 
         if not file_path:
             print(f"Questions file not found for position: {job_position}")
+            # List available files to help troubleshooting
+            print(f"Files in {self.output_dir}:")
+            for file in os.listdir(self.output_dir):
+                if os.path.isfile(os.path.join(self.output_dir, file)):
+                    print(f"  - {file}")
             return False
 
         try:
             with open(file_path, 'r', encoding='utf-8') as f:
                 content = f.read()
 
-            # Parse questions from markdown
-            # Try to match both numbered list (1. Question) and bullet point lists (- Question)
+            # Parse questions from markdown using different patterns
+            # Try to match numbered list (1. Question), bullet points (- Question), and questions with headers or inside quotations
             numbered_pattern = re.compile(r'^\d+\.\s+(.+)$', re.MULTILINE)
             bullet_pattern = re.compile(r'^[-*]\s+(.+)$', re.MULTILINE)
+            quoted_pattern = re.compile(
+                r'["""]([^"""]+)["""]', re.MULTILINE)  # Match quoted questions
 
+            # Find all matches
             numbered_matches = numbered_pattern.findall(content)
             bullet_matches = bullet_pattern.findall(content)
+            quoted_matches = quoted_pattern.findall(content)
+
+            # Log results for debugging
+            print(f"Found {len(numbered_matches)} numbered questions")
+            print(f"Found {len(bullet_matches)} bullet point questions")
+            print(f"Found {len(quoted_matches)} quoted questions")
 
             # Use whichever pattern found more matches
-            if len(numbered_matches) >= len(bullet_matches):
+            if len(numbered_matches) >= max(len(bullet_matches), len(quoted_matches)):
                 self.questions = numbered_matches
-            else:
+            elif len(bullet_matches) >= len(quoted_matches):
                 self.questions = bullet_matches
+            else:
+                self.questions = quoted_matches
+
+            # Filter out empty questions and trim whitespace
+            self.questions = [q.strip() for q in self.questions if q.strip()]
 
             # Reset asked questions
             self.asked_questions = set()
@@ -74,7 +96,7 @@ class InterviewManager:
             print(f"Error loading questions: {e}")
             return False
 
-    def get_random_question(self):
+    def get_random_question(self) -> Optional[str]:
         """Get a random question that hasn't been asked yet."""
         if not self.questions:
             return None
@@ -96,7 +118,11 @@ class InterviewManager:
 
         return question
 
-    def save_company_report(self, content, company):
+    def get_all_questions(self) -> List[str]:
+        """Get all loaded questions."""
+        return self.questions
+
+    def save_company_report(self, content: str, company: str) -> str:
         """Save the company research report."""
         file_name = self.sanitize_filename(f"{company}_report.md")
         file_path = os.path.join(self.output_dir, file_name)
@@ -107,7 +133,7 @@ class InterviewManager:
         print(f"Company report saved to {file_path}")
         return file_path
 
-    def save_interviewer_report(self, content, interviewer):
+    def save_interviewer_report(self, content: str, interviewer: str) -> str:
         """Save the interviewer research report."""
         file_name = self.sanitize_filename(f"{interviewer}_report.md")
         file_path = os.path.join(self.output_dir, file_name)
@@ -118,7 +144,7 @@ class InterviewManager:
         print(f"Interviewer report saved to {file_path}")
         return file_path
 
-    def save_questions(self, content, job_position):
+    def save_questions(self, content: str, job_position: str) -> str:
         """Save the interview questions."""
         file_name = self.sanitize_filename(f"{job_position}_questions.md")
         file_path = os.path.join(self.output_dir, file_name)
@@ -129,7 +155,7 @@ class InterviewManager:
         print(f"Questions saved to {file_path}")
         return file_path
 
-    def save_feedback(self, question_num, question, answer, feedback):
+    def save_feedback(self, question_num: int, question: str, answer: str, feedback: str) -> str:
         """Save feedback for a question."""
         feedback_dir = os.path.join(self.output_dir, "feedback")
         os.makedirs(feedback_dir, exist_ok=True)
@@ -143,4 +169,5 @@ class InterviewManager:
             f.write(f"**Your Answer:**\n\n{answer}\n\n")
             f.write(f"**Feedback:**\n\n{feedback}\n")
 
+        print(f"Feedback saved to {file_path}")
         return file_path
