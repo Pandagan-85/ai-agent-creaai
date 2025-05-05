@@ -1,0 +1,4 @@
+company=DigitalMakers
+interviewer=Francesco Anzelmo
+job_position=Front end developer
+industry=Marketing Agency

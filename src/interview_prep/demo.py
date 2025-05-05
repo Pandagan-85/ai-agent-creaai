@@ -1,6 +1,7 @@
 #!/usr/bin/env python
 import os
 import time
+import re  # Add explicit import for re module
 from dotenv import load_dotenv
 from interview_prep.crew import InterviewPrepCrew
 
@@ -11,6 +12,7 @@ load_dotenv()
 COMPANY = "aitho.it"
 INTERVIEWER = "Carla Naselli"
 JOB_POSITION = "ML Engineering, GenAI / AI Agent"
+INDUSTRY = "AI and Technology"  # Define INDUSTRY as a constant
 JOB_DESCRIPTION = """
 About The Role Role Overview: At aitho, we are developing an innovative AI Personal 
 Shopper designed to redefine the online shopping experience for buyers. Our aim is 
@@ -35,50 +37,11 @@ You and your team won't just be working on theoretical concepts – you'll be at
 forefront of implementing AI systems at scale, directly empowering our merchants. 
 We're all about creating tangible solutions that make a real difference in the day 
 to day lives of entrepreneurs.
-
-Key outputs:
-- Developing and deploying Generative AI, natural language processing and machine learning models
-- Producing system design and architecture of scalable AI/ML systems
-- Designing and implementing data pipelines for fine-tuning LLMs
-- Solving high impact data problems and delivering business impact through data and machine learning products
-- Prioritizing and communicating to technical and non-technical audiences alike
-
-Qualifications:
-- Demonstrated mastery building data products that use generative AI, RLHF and fine-tuning LLMs
-- End-to-end experience of training, evaluating, testing and deploying machine learning products at scale
-- Experience building data pipelines and driving ETL design decisions leveraging disparate data sources
-- Experience with the following: Python, shell scripting, streaming and batch data pipelines, vector databases, DBT, BigQuery, BigTable or equivalent, orchestration tools
-- Experience with running machine learning in parallel environments (e.g. distributed clusters, GPU optimization)
-
-This role may require on-call work
-
-About aitho
-Opportunity is not evenly distributed. aitho puts independence within reach for anyone 
-with a dream to start a business. We propel entrepreneurs and enterprises to scale the 
-heights of their potential. Since 2006, we've grown to over 8,300 employees and 
-generated over $1 trillion in sales for millions of merchants in 175 countries. This 
-is life-defining work that directly impacts people's lives as much as it transforms 
-your own. This is putting the power of the few in the hands of the many, is a future 
-with more voices rather than fewer, and is creating more choices instead of an elite option.
-
-About You
-Moving at our pace brings a lot of change, complexity, and ambiguity—and a little bit 
-of chaos. aitho folk thrive on that and are comfortable being uncomfortable. That means 
-aitho is not the right place for everyone. Before you apply, consider if you can:
-- Care deeply about what you do and about making commerce better for everyone
-- Excel by seeking professional and personal hypergrowth
-- Keep up with an unrelenting pace (the week, not the quarter)
-- Be resilient and resourceful in face of ambiguity and thrive on (rather than endure) change
-- Bring critical thought and opinion
-- Use AI tools reflexively as part of your fundamental workflow
-- Embrace differences and disagreement to get shit done and move forward
-- Work digital-first for your daily work
 """
 
 
 def sanitize_filename(name):
     """Remove or replace invalid characters for filenames."""
-    import re
     # Replace problematic characters with underscore
     sanitized = re.sub(r'[\\/*?:"<>|,]', '_', str(name))
     # Remove extra spaces and trim if too long
@@ -118,7 +81,7 @@ def run_demo():
         'company': COMPANY,
         'interviewer': INTERVIEWER,
         'job_position': JOB_POSITION,
-        'industry': "AI and Technology",
+        'industry': INDUSTRY,  # Include industry parameter
         'job_description': JOB_DESCRIPTION
     }
 
@@ -132,11 +95,11 @@ def run_demo():
 
         # Use sanitized filenames
         company_file = os.path.join(
-            "output", sanitize_filename(f"{COMPANY}_report.txt"))
+            "output", sanitize_filename(f"{COMPANY}_report.md"))  # Use .md extension instead of .txt
         interviewer_file = os.path.join(
-            "output", sanitize_filename(f"{INTERVIEWER}_report.txt"))
+            "output", sanitize_filename(f"{INTERVIEWER}_report.md"))  # Use .md extension
         questions_file = os.path.join(
-            "output", sanitize_filename(f"{JOB_POSITION}_report.txt"))
+            "output", sanitize_filename(f"{JOB_POSITION}_questions.md"))  # Use .md extension and "_questions" suffix
 
         with open(company_file, 'w', encoding='utf-8') as f:
             f.write(company_report)
@@ -206,6 +169,7 @@ def run_demo():
             'company': COMPANY,
             'interviewer': INTERVIEWER,
             'job_position': JOB_POSITION,
+            'industry': INDUSTRY,  # Include industry parameter
             'job_position_report': question,  # This is needed for interview phase
             'user_answer': answer
         }
