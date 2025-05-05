@@ -33,6 +33,35 @@ st.set_page_config(
     layout="wide"
 )
 
+
+def sanitize_input(text):
+    """
+    Sanitize user input by removing potentially problematic characters and trimming whitespace.
+
+    Args:
+        text (str): The input text to sanitize
+
+    Returns:
+        str: The sanitized text
+    """
+    if not text:
+        return ""
+
+    # Convert to string if not already
+    text = str(text)
+
+    # Replace HTML tags with spaces
+    import re
+    text = re.sub(r'<[^>]*>', ' ', text)
+
+    # Remove potentially dangerous characters
+    text = re.sub(r'[\\\'";%]', '', text)
+
+    # Remove multiple spaces and trim
+    text = re.sub(r'\s+', ' ', text).strip()
+
+    return text
+
 # Funzione per ottenere il percorso specifico della sessione
 
 
@@ -546,7 +575,15 @@ def main():
                 "Job Description", value="", height=300, help="Paste the complete job description here")
             submit_research = st.form_submit_button("Generate Questions")
 
-        if submit_research:
+       if submit_research:
+            # Sanitize all inputs before processing
+            company = sanitize_input(company)
+            interviewer = sanitize_input(interviewer)
+            job_position = sanitize_input(job_position)
+            industry = sanitize_input(industry)
+            country = sanitize_input(country)
+            job_description = sanitize_input(job_description)
+            
             if not company or not job_position or not industry or not job_description:
                 st.error(
                     "Please fill in all required fields: Company, Job Position, Industry, and Job Description.")
@@ -588,7 +625,11 @@ def main():
                 "No questions loaded. Please load existing questions or run the Research phase first.")
             job_pos_load = st.text_input("Job Position", value=st.session_state.get(
                 'job_position', ''), help="Enter the job position to load questions for")
+            
             if st.button("Load Existing Questions") and job_pos_load:
+                # Sanitize input
+                job_pos_load = sanitize_input(job_pos_load)
+                
                 st.session_state.questions = load_questions(job_pos_load)
                 if st.session_state.questions:
                     st.success(
@@ -640,6 +681,9 @@ def main():
             submit_answer = st.form_submit_button("Submit Answer")
 
         if submit_answer:
+            # Sanitize the answer input
+            answer = sanitize_input(answer)
+            
             if not answer:
                 st.error("Please provide an answer before submitting.")
             else:
@@ -666,7 +710,7 @@ def main():
                 st.session_state.question_number += 1
                 st.session_state.current_question = None
                 st.rerun()
-
+                
         if st.session_state.feedback:
             st.write("### Feedback on Your Previous Answer")
             st.markdown(st.session_state.feedback)
