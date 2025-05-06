@@ -16,6 +16,7 @@ import sys
 import os
 import traceback
 import shutil
+from src.interview_prep.utils.interview_manager import InterviewManager
 
 # Gestione delle sessioni - aggiungi questo dopo gli import
 import uuid
@@ -67,7 +68,9 @@ def sanitize_input(text):
 def get_session_path():
     """Ottiene il percorso della directory specifica per questa sessione."""
     base_dir = "output"
-    session_dir = os.path.join(base_dir, st.session_state.session_id)
+    # Se non stiamo più usando gli ID di sessione, restituisci direttamente la directory di base
+    # session_dir = os.path.join(base_dir, st.session_state.session_id)
+    session_dir = base_dir  # Semplificato
 
     # Crea la directory se non esiste
     os.makedirs(session_dir, exist_ok=True)
@@ -76,46 +79,39 @@ def get_session_path():
     return session_dir
 
 
-def cleanup_markdown_files():
+def clear_all_data():
     """
-    Clean up all generated Markdown files from previous sessions.
-    Only keeps files from the current session.
+    Cancella completamente tutti i dati generati nella directory di output.
+    Garantisce che nessun dato rimanga accessibile ad altri utenti.
     """
-    # Get current session directory
-    current_session_dir = get_session_path()
-
-    # Get the parent directory (output)
-    output_dir = os.path.dirname(current_session_dir)
-
-    # Only process if output directory exists
-    if not os.path.exists(output_dir):
-        return 0
-
-    # Count of removed files
-    removed_count = 0
+    # Ottieni il percorso della directory di output
+    output_dir = get_session_path()
 
     try:
-        # Iterate through all files in the output directory
-        for item in os.listdir(output_dir):
-            item_path = os.path.join(output_dir, item)
+        # 1. Cancella tutti i file nella directory principale
+        for filename in os.listdir(output_dir):
+            file_path = os.path.join(output_dir, filename)
+            if os.path.isfile(file_path):
+                os.remove(file_path)
+                print(f"Rimosso file: {file_path}")
+            elif os.path.isdir(file_path) and filename != ".session":
+                # Rimuovi le sottodirectory, ma preserva .session
+                shutil.rmtree(file_path)
+                print(f"Rimossa directory: {file_path}")
 
-            # Skip the current session directory and .session directory
-            if item == os.path.basename(current_session_dir) or item == ".session":
-                continue
+        # 2. Ricrea le directory necessarie
+        os.makedirs(os.path.join(output_dir, "feedback"), exist_ok=True)
 
-            # Remove MD files in root output directory
-            if os.path.isfile(item_path) and item.endswith('.md'):
-                os.remove(item_path)
-                removed_count += 1
+        # 3. Opzionale: scrivi un file vuoto o di placeholder
+        with open(os.path.join(output_dir, ".clean"), "w") as f:
+            f.write(f"Directory cleaned on {time.ctime()}")
 
-            # Remove session directories that aren't the current one
-            if os.path.isdir(item_path) and item != os.path.basename(current_session_dir) and item != ".session":
-                shutil.rmtree(item_path)
-                removed_count += 1
+        return True, "Tutti i dati sono stati cancellati con successo."
+
     except Exception as e:
-        print(f"Error during cleanup: {e}")
-
-    return removed_count
+        error_message = f"Errore durante la pulizia dei dati: {str(e)}"
+        print(error_message)
+        return False, error_message
 
 
 def set_api_key(key_name):
@@ -224,57 +220,6 @@ except ImportError as e:
         st.code("\n".join(sys.path))
         st.stop()  # Stop execution if import fails
 
-# Create a simplified InterviewManager
-
-
-class InterviewManager:
-    """Manager for the interview process."""
-
-    def __init__(self, output_dir="output"):
-        self.output_dir = get_session_path()
-
-        os.makedirs(output_dir, exist_ok=True)
-        os.makedirs(os.path.join(output_dir, "feedback"), exist_ok=True)
-
-    def sanitize_filename(self, name):
-        """Remove or replace invalid characters for filenames."""
-        sanitized = re.sub(r'[\\/*?:"<>|,]', '_', str(name))
-        sanitized = re.sub(r'\s+', ' ', sanitized).strip()
-        max_length = 100
-        if len(sanitized) > max_length:
-            sanitized = sanitized[:max_length]
-        return sanitized
-
-    def save_company_report(self, content, company):
-        """Save the company research report."""
-        # Sanitize company name for filename
-        company = sanitize_input(company)
-        file_name = self.sanitize_filename(f"{company}_report.md")
-        file_path = os.path.join(self.output_dir, file_name)
-        with open(file_path, 'w', encoding='utf-8') as f:
-            f.write(content)
-        return file_path
-
-    def save_interviewer_report(self, content, interviewer):
-        """Save the interviewer research report."""
-        # Sanitize interviewer name for filename
-        interviewer = sanitize_input(interviewer)
-        file_name = self.sanitize_filename(f"{interviewer}_report.md")
-        file_path = os.path.join(self.output_dir, file_name)
-        with open(file_path, 'w', encoding='utf-8') as f:
-            f.write(content)
-        return file_path
-
-    def save_questions(self, content, job_position):
-        """Save the interview questions."""
-        # Sanitize job position for filename
-        job_position = sanitize_input(job_position)
-        file_name = self.sanitize_filename(f"{job_position}_questions.md")
-        file_path = os.path.join(self.output_dir, file_name)
-        with open(file_path, 'w', encoding='utf-8') as f:
-            f.write(content)
-        return file_path
-
 
 # Constants
 MAX_PRACTICE_QUESTIONS = 5  # Maximum number of questions in a practice session
@@ -290,6 +235,10 @@ if 'question_number' not in st.session_state:
     st.session_state.question_number = 1
 if 'current_question' not in st.session_state:
     st.session_state.current_question = None
+# Inizializza l'InterviewManager nella sessione
+if 'interview_manager' not in st.session_state:
+    st.session_state.interview_manager = InterviewManager(
+        output_dir=get_session_path())
 
 
 def load_questions(job_position):
@@ -297,45 +246,25 @@ def load_questions(job_position):
     # Sanitize job position for filename
     job_position = sanitize_input(job_position)
 
-    session_dir = get_session_path()  # Usa la directory della sessione
-    possible_filenames = [
-        f"{job_position}_questions.md",
-        f"{job_position}_report.md",
-        f"{job_position}_report.txt"
-    ]
-    possible_filenames = [re.sub(r'[\\/*?:"<>|,]', '_', name)
-                          for name in possible_filenames]
-    st.write("Cercando file con i seguenti nomi:", possible_filenames)  # Debug
-    file_path = None
-    for filename in possible_filenames:
-        # Usa session_dir invece di "output"
-        path = os.path.join(session_dir, filename)
-        if os.path.exists(path):
-            file_path = path
-            st.write(f"Trovato file: {path}")  # Debug
-            break
-    if not file_path:
+    # Usa l'InterviewManager dalla sessione
+    manager = st.session_state.interview_manager
+    # Aggiorna la directory di output se necessario
+    manager.output_dir = get_session_path()
+
+    # Debug info
+    st.write("Cercando domande per:", job_position)
+
+    # Carica le domande usando l'InterviewManager
+    success = manager.load_questions(job_position)
+
+    if success:
+        st.write(f"Trovate {len(manager.questions)} domande")
+        return manager.questions
+    else:
         st.warning(f"No question files found for {job_position}")
         st.write("Files disponibili nella directory della sessione:")
         # Elenca i file nella directory della sessione
-        st.code(os.listdir(session_dir))
-        return []
-    try:
-        with open(file_path, 'r', encoding='utf-8') as f:
-            content = f.read()
-        numbered_pattern = re.compile(r'^\d+\.\s+(.+)$', re.MULTILINE)
-        bullet_pattern = re.compile(r'^[-*]\s+(.+)$', re.MULTILINE)
-        numbered_matches = numbered_pattern.findall(content)
-        bullet_matches = bullet_pattern.findall(content)
-        # Debug
-        st.write(
-            f"Trovate {len(numbered_matches)} domande numerate e {len(bullet_matches)} con bullet points")
-        if len(numbered_matches) >= len(bullet_matches):
-            return numbered_matches
-        else:
-            return bullet_matches
-    except Exception as e:
-        st.error(f"Error loading questions: {e}")
+        st.code(os.listdir(get_session_path()))
         return []
 
 
@@ -343,43 +272,51 @@ def get_random_question():
     """Get a random question that hasn't been asked yet."""
     if not st.session_state.questions:
         return None
-    available_questions = [q for i, q in enumerate(st.session_state.questions)
-                           if i not in st.session_state.asked_questions]
-    if not available_questions:
-        return None
-    question = random.choice(available_questions)
-    question_index = st.session_state.questions.index(question)
-    st.session_state.asked_questions.add(question_index)
+
+    # Usa l'InterviewManager dalla sessione
+    manager = st.session_state.interview_manager
+
+    # Sincronizza lo stato delle domande con quello nella sessione
+    manager.questions = st.session_state.questions
+    manager.asked_questions = st.session_state.asked_questions
+
+    # Ottieni una domanda casuale
+    question = manager.get_random_question()
+
+    # Se c'è una nuova domanda, aggiorna lo stato della sessione
+    if question:
+        st.session_state.asked_questions = manager.asked_questions
+
     return question
 
 
 def save_feedback(question_num, question, answer, feedback):
     """Save feedback for a question."""
-    session_dir = get_session_path()  # Usa la directory della sessione
-    feedback_dir = os.path.join(session_dir, "feedback")
-    os.makedirs(feedback_dir, exist_ok=True)
-    file_name = f"question_{question_num}_feedback.md"
-    file_path = os.path.join(feedback_dir, file_name)
-    with open(file_path, 'w', encoding='utf-8') as f:
-        f.write(f"# Question {question_num}\n\n")
-        f.write(f"**Question:** {question}\n\n")
-        f.write(f"**Your Answer:**\n\n{answer}\n\n")
-        f.write(f"**Feedback:**\n\n{feedback}\n")
+    # Usa l'InterviewManager dalla sessione
+    manager = st.session_state.interview_manager
+
+    # Aggiorna la directory di output se necessario
+    manager.output_dir = get_session_path()
+
+    # Salva il feedback usando l'InterviewManager
+    file_path = manager.save_feedback(question_num, question, answer, feedback)
     return file_path
 
 
 def run_research(company, interviewer, job_position, industry, country, job_description):
     """Run the research and question generation phase."""
-    os.makedirs("output", exist_ok=True)
-    manager = InterviewManager()
+    output_dir = get_session_path()
+    os.makedirs(output_dir, exist_ok=True)
+
+    # Usa l'InterviewManager
+    manager = st.session_state.interview_manager
+    # Aggiorna la directory di output
+    manager.output_dir = output_dir
 
     try:
-        crew = InterviewPrepCrew().crew()
-        crew.tasks = [task for task in crew.tasks if task.name in [
-            "research_company_task",
-            "research_person_task",
-            "define_questions_task"
-        ]]
+        # Crea una nuova istanza per la ricerca
+        crew_instance = InterviewPrepCrew()
+        crew = crew_instance.research_crew()
 
         inputs = {
             'company': company,
@@ -390,25 +327,48 @@ def run_research(company, interviewer, job_position, industry, country, job_desc
             'job_description': job_description
         }
 
-        with st.spinner("Researching and generating questions... This may take several minutes."):
+        with st.spinner("Ricerca e generazione di domande in corso... Questo potrebbe richiedere diversi minuti."):
             result = crew.kickoff(inputs=inputs)
 
+        # Debug info
+        st.write(f"Task completate: {len(result.tasks_output)}")
+
         for i, task_output in enumerate(result.tasks_output):
-            if i == 0:
+            st.write(
+                f"Task {i}: {task_output.task_name if hasattr(task_output, 'task_name') else 'Unknown'}")
+            st.write(f"Output length: {len(task_output.raw)}")
+
+            if i == 0:  # Company research
                 company_file = manager.save_company_report(
                     task_output.raw, company)
-            elif i == 1:
+            elif i == 1:  # Interviewer research
                 interviewer_file = manager.save_interviewer_report(
                     task_output.raw, interviewer)
-            elif i == 2:
+            elif i == 2:  # Questions
                 questions_file = manager.save_questions(
                     task_output.raw, job_position)
+
+                # Elimina l'altro file se esiste per evitare duplicati
+                default_questions_file = os.path.join(
+                    output_dir, "interview_questions.md")
+                if os.path.exists(default_questions_file) and default_questions_file != questions_file:
+                    try:
+                        os.remove(default_questions_file)
+                        st.write(
+                            f"Rimosso file duplicato: {default_questions_file}")
+                    except Exception as e:
+                        st.write(
+                            f"Impossibile rimuovere il file duplicato: {e}")
             else:
                 continue
 
-        st.session_state.questions = load_questions(job_position)
+        # Carica le domande
+        st.write("Caricamento domande...")
+        manager.load_questions(job_position)
+        st.session_state.questions = manager.questions
         st.session_state.asked_questions = set()
         st.session_state.question_number = 1
+
         return len(st.session_state.questions)
 
     except Exception as e:
@@ -438,10 +398,12 @@ def run_research(company, interviewer, job_position, industry, country, job_desc
 def get_feedback(company, interviewer, job_position, industry, question, answer):
     """Get AI feedback on the answer."""
     try:
-        crew = InterviewPrepCrew().crew()
-        # Usa solo le task necessarie
-        crew.tasks = [
-            task for task in crew.tasks if task.name in ["feedback_task"]]
+        # Crea una nuova istanza per generare il feedback
+        crew_instance = InterviewPrepCrew()
+        # Debug
+        st.write(f"Agenti disponibili: {len(crew_instance.agents)}")
+
+        crew = crew_instance.feedback_crew()
 
         inputs = {
             'company': sanitize_input(company),
@@ -462,6 +424,8 @@ def get_feedback(company, interviewer, job_position, industry, question, answer)
 
     except Exception as e:
         st.error(f"Error generating feedback: {e}")
+        traceback_str = traceback.format_exc()
+        st.code(traceback_str)  # Mostra il traceback completo
         return f"Si è verificato un errore durante la generazione del feedback: {str(e)}"
 
 
@@ -469,10 +433,10 @@ def main():
     """Main Streamlit application."""
     st.title("AI Interview Preparation Assistant")
 
-    # Clean up markdown files from previous sessions
-    cleanup_count = cleanup_markdown_files()
-    if cleanup_count > 0:
-        st.toast(f"Cleaned up {cleanup_count} files from previous sessions")
+    # MODIFICA: Esegui la pulizia solo al primo avvio dell'app, non ad ogni refresh
+    if 'app_initialized' not in st.session_state:
+        # NON eseguire clear_all_data() qui
+        st.session_state.app_initialized = True
 
     # Tentativo di caricare informazioni sessione precedente (se necessario)
     # if ('company' not in st.session_state or
@@ -495,52 +459,58 @@ def main():
     page = st.sidebar.radio(
         "Select a page:", ["Welcome", "Research", "Practice", "Reports"])
     st.sidebar.markdown("---")
-    st.sidebar.subheader("Session Management")
+    st.sidebar.subheader("Data Management")
 
-    # Mostra informazioni sulla sessione corrente
-    st.sidebar.info(f"Session ID: {st.session_state.session_id[:8]}...")
+    if st.sidebar.button("Clear Data"):
+        # Pulisci tutti i file di output
+        success, message = clear_all_data()
 
-    if st.sidebar.button("End Session & Clear Data"):
-        session_dir = os.path.join("output", st.session_state.session_id)
-        if os.path.exists(session_dir):
-            import shutil
-            shutil.rmtree(session_dir)
+        if success:
+            # Resetta le variabili di sessione
+            st.session_state.questions = []
+            st.session_state.asked_questions = set()
+            st.session_state.feedback = ""
+            st.session_state.question_number = 1
+            st.session_state.current_question = None
 
-        # Clean up all markdown files
-        cleanup_markdown_files()
+            # Reinizializza l'InterviewManager
+            st.session_state.interview_manager = InterviewManager(
+                output_dir=get_session_path())
 
-        # Crea un nuovo ID di sessione
-        st.session_state.session_id = str(uuid.uuid4())
-        st.session_state.session_start_time = time.time()
+            st.sidebar.success("✅ " + message)
+        else:
+            st.sidebar.error("❌ " + message)
 
-        # Resetta le variabili di sessione
-        st.session_state.questions = []
-        st.session_state.asked_questions = set()
-        st.session_state.feedback = ""
-        st.session_state.question_number = 1
-        st.session_state.current_question = None
-
-        # Ricrea le directory della nuova sessione
-        os.makedirs(get_session_path(), exist_ok=True)
-        os.makedirs(os.path.join(get_session_path(),
-                    "feedback"), exist_ok=True)
-
-        st.sidebar.success("Session ended and data cleared!")
         st.rerun()
 
     if page == "Welcome":
-        st.write("## Welcome to the AI Interview Preparation Assistant!")
+        st.write("## Benvenuto all'Assistente AI per la Preparazione ai Colloqui!")
         st.write("""
-        This application helps you prepare for job interviews by:
+        Questa applicazione ti aiuta a prepararti per i colloqui di lavoro:
 
-        1. **Researching** the company and interviewer
-        2. **Generating** customized interview questions
-        3. **Practicing** your answers and receiving AI feedback
+        1. **Ricercando** l'azienda e l'intervistatore
+        2. **Generando** domande personalizzate per il colloquio
+        3. **Esercitandoti** con le tue risposte e ricevendo feedback dall'AI
 
-        To get started, select 'Research' from the navigation menu to generate
-        interview questions for your specific job position.
+        Per iniziare, seleziona 'Ricerca' dal menu di navigazione per generare
+        domande specifiche per la tua posizione lavorativa.
         """)
-        st.info("This application uses AI to simulate real interview scenarios. The quality of the preparation depends on the inputs you provide.")
+        st.info("Questa applicazione utilizza l'AI per simulare scenari reali di colloquio. La qualità della preparazione dipende dalle informazioni che fornisci.")
+        # Aggiungiamo una sezione FAQ
+        with st.expander("Domande frequenti"):
+            st.markdown("""
+            **Quanto tempo richiede la generazione delle domande?**  
+            La fase di ricerca e generazione può richiedere da 3 a 5 minuti, a seconda della complessità dell'azienda e del ruolo.
+            
+            **Le mie informazioni sono al sicuro?**  
+            Sì! Tutti i dati vengono elaborati localmente e possono essere cancellati in qualsiasi momento utilizzando il pulsante "Cancella Dati".
+            
+            **Posso usare l'applicazione per più posizioni lavorative?**  
+            Assolutamente! Puoi generare domande per diverse posizioni lavorative semplicemente avviando una nuova ricerca.
+            
+            **Come posso ottenere i migliori risultati?**  
+            Inserisci informazioni dettagliate nella descrizione del lavoro e sii specifico riguardo al settore e al ruolo. Più informazioni fornisci, migliori saranno le domande generate.
+            """)
 
     elif page == "Reports":
         st.write("## Generated Reports")
@@ -623,12 +593,12 @@ def main():
                     company, interviewer, job_position, industry, country, job_description)
                 if num_questions > 0:
                     st.success(
-                        f"Research completed! Generated {num_questions} interview questions.")
+                        f"Ricerca completata! Generate {num_questions} domande per il colloquio.")
                     st.write(
-                        "Go to the 'Practice' page to start practicing with these questions.")
+                        "Vai alla pagina 'Practise' per iniziare ad esercitarti con queste domande.")
                 else:
                     st.error(
-                        "Failed to generate questions. Please check the logs or try again with more detailed information.")
+                        "Impossibile generare domande. Controlla i log o riprova con informazioni più dettagliate.")
 
     elif page == "Practice":
         st.write("## Practice Phase")
@@ -750,6 +720,4 @@ def main():
 
 
 if __name__ == "__main__":
-    # Clean up markdown files from previous sessions at startup
-    cleanup_markdown_files()
     main()

@@ -1,57 +1,76 @@
 research_company_task:
   description: >
-    Research about {company} in {country}, their position in the sector and recent industry trends.
-    Focus on recent news and developments from the last 12 months (from 2024 to 2025).
-    Consider local market conditions and business culture in {country}.
+    Conduci una ricerca approfondita su {company}, iniziando con informazioni generali sull'azienda e poi concentrandoti sulle loro attività in {country}:
+
+    1. Prima, cerca di trovare il sito web ufficiale dell'azienda e informazioni di base su cosa fanno
+    2. Ricerca il background, i servizi e le offerte dell'azienda SENZA restrizioni geografiche
+    3. POI concentrati sulle loro operazioni in {country}
+    4. Cerca notizie recenti, sviluppi degli ultimi 12-24 mesi
+    5. Identifica le tendenze del settore relative al loro campo in {country}
+
+    Usa un approccio graduale:
+    - Inizia con ricerche ampie solo sul nome dell'azienda
+    - Poi aggiungi dettagli sul loro settore di attività se noto
+    - Infine aggiungi informazioni specifiche sul paese
+
+    Se le informazioni dirette sull'azienda in {country} sono limitate, fornisci comunque le informazioni generali sull'azienda e poi discuti le tendenze del settore pertinenti in {country}.
+    IMPORTANTE: Il tuo rapporto finale DEVE essere scritto completamente in italiano, anche se le fonti che trovi sono in inglese o altre lingue. Traduci tutte le informazioni trovate.
+
   expected_output: >
-    A comprehensive report in markdown with bullet points about {company} and its industry in {country}.
+    Un report completo in lingua italiana in formato markdown su {company}, che includa:
+    - Una panoramica generale dell’azienda (indipendentemente dal paese)
+    - I loro prodotti/servizi e la proposta di valore
+    - Le loro attività specifiche in {country} (se presenti)
+    - Tendenze rilevanti del settore in {country}
+    - Considerazioni sulla cultura aziendale
   agent: research_agent
 
 research_person_task:
   description: >
-    Research about {interviewer} with a focus on their professional career.
-    Consider any connections to {country} or regional expertise they might have.
+    Ricerca informazioni su {interviewer} con un focus sulla sua carriera professionale.
+    Considera eventuali collegamenti con {country} o competenze regionali che potrebbe avere.
+    IMPORTANTE: Il tuo rapporto finale DEVE essere scritto completamente in italiano.
   expected_output: >
-    A comprehensive report in markdown with bullet points about {interviewer}.
+    Un rapporto completo in lingua italiana in  formato markdown con punti elenco su {interviewer}.
   agent: research_agent
 
 define_questions_task:
   description: >
-    Define a list of questions based on the company {company}, job description {job_description}, 
-    interviewer {interviewer}, and considering the cultural context of {country}.
-    Consider local business practices and cultural expectations in {country}.
+    Definisci un elenco di domande in lingua italiana basate sull'azienda {company}, sulla descrizione del lavoro {job_description}, 
+    sull'intervistatore {interviewer} e considerando il contesto culturale di {country}.
+    Considera le pratiche aziendali locali e le aspettative culturali in {country}.
   expected_output: >
-    A list of 20 questions in Markdown format that cover: Culture and Team fit, Job Position Fit, 
-    Background and ways of working, Growth Mindset, and any country-specific considerations relevant to {country}.
+    Un elenco di 20 domande in formato Markdown che coprano: Cultura e adattamento al Team, Adattamento alla Posizione di Lavoro, 
+    Background e modalità di lavoro, Mentalità di Crescita e qualsiasi considerazione specifica del paese rilevante per {country}.
   agent: interview_coach
   context:
     - research_company_task
     - research_person_task
-  output_file: output/interview_questions.md
+  output_file: output/domande_intervista.md
 
 interview_prep_task:
   description: >
-    Ask the following question to the user and analyze their response:
+    Poni la seguente domanda all'utente e analizza la sua risposta:
 
     {job_position_report}
   expected_output: >
-    The question asked and the user's response.
+    La domanda posta e la risposta dell'utente.
   agent: interview_agent
   human_input: true
 
 feedback_task:
   description: >
-    Review the user's response to the interview question:
+    Rivedi la risposta dell'utente alla domanda del colloquio:
 
-    Question: {job_position_report}
-    User's Answer: {user_answer}
+    Domanda: {job_position_report}
+    Risposta dell'utente: {user_answer}
 
-    Provide constructive feedback on:
-    1. What was good about the answer
-    2. What could be improved
-    3. Specific suggestions to enhance the response
-    4. Alternative ways to approach the question
+    Fornisci un feedback costruttivo su:
+    1. Cosa è stato buono nella risposta
+    2. Cosa potrebbe essere migliorato
+    3. Suggerimenti specifici per migliorare la risposta
+    4. Modi alternativi per affrontare la domanda
   expected_output: >
-    Detailed feedback on the user's answer with specific points for improvement and alternative approaches.
+    Feedback dettagliato sulla risposta dell'utente con punti specifici per il miglioramento e approcci alternativi.
   agent: interview_coach
   output_file: output/feedback.md

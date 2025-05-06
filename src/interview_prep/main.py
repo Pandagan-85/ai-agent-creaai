@@ -63,12 +63,7 @@ def run_research():
     print(f"Country: {country}")
 
     # Create crew for research only
-    crew = InterviewPrepCrew().crew()
-    crew.tasks = [task for task in crew.tasks if task.name in [
-        "research_company_task",
-        "research_person_task",
-        "define_questions_task"
-    ]]
+    crew = InterviewPrepCrew().research_crew()
 
     # Run crew with inputs
     inputs = {

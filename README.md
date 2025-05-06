@@ -1,54 +1,192 @@
-# InterviewPrep Crew
+# AI Interview Preparation Assistant
 
-Welcome to the InterviewPrep Crew project, powered by [crewAI](https://crewai.com). This template is designed to help you set up a multi-agent AI system with ease, leveraging the powerful and flexible framework provided by crewAI. Our goal is to enable your agents to collaborate effectively on complex tasks, maximizing their collective intelligence and capabilities.
+Un'applicazione avanzata che utilizza l'intelligenza artificiale per aiutare gli utenti a prepararsi per i colloqui di lavoro, combinando l'interfaccia utente di Streamlit con il framework CrewAI per generare contenuti personalizzati e feedback interattivi.
 
-## Installation
+> **Nota**: Questo progetto è nato seguendo il corso [Build AI Agents with CrewAI](https://zerotomastery.io/courses/learn-crewai-agents/) di Zero to Mastery, tenuto da Diogo Resende, a cui ho aggiunto un'interfaccia utente completa utilizzando Streamlit per rendere l'applicazione più accessibile e interattiva.
 
-Ensure you have Python >=3.10 <3.13 installed on your system. This project uses [UV](https://docs.astral.sh/uv/) for dependency management and package handling, offering a seamless setup and execution experience.
+## Panoramica
 
-First, if you haven't already, install uv:
+L'AI Interview Preparation Assistant è uno strumento progettato per aiutare i candidati a prepararsi efficacemente per i colloqui di lavoro attraverso:
 
-```bash
-pip install uv
+- Ricerca personalizzata sull'azienda e l'intervistatore
+- Generazione di domande specifiche per la posizione lavorativa
+- Simulazione di colloqui con feedback in tempo reale
+
+L'applicazione utilizza modelli di linguaggio avanzati per creare un'esperienza di preparazione al colloquio su misura, considerando il settore specifico, la cultura aziendale e le tendenze del mercato locale.
+
+## Funzionalità Principali
+
+- **Ricerca Azienda**: Genera un report dettagliato sull'azienda target, compresi profilo, attività recenti e tendenze del settore
+- **Ricerca Intervistatore**: Produce informazioni sul potenziale intervistatore, se disponibili
+- **Generazione Domande**: Crea fino a 20 domande personalizzate in base al ruolo, all'azienda e al settore
+- **Pratica Interattiva**: Permette di esercitarsi con le domande e ricevere feedback dettagliato
+- **Report Scaricabili**: Tutti i contenuti generati sono disponibili in formato markdown scaricabile
+
+## Architettura Tecnica
+
+### Interfaccia Utente - Streamlit
+
+L'applicazione utilizza Streamlit per creare un'interfaccia web interattiva con le seguenti pagine:
+
+1. **Benvenuto**: Introduzione all'applicazione e guida all'utilizzo
+2. **Ricerca**: Form per inserire informazioni sulla posizione desiderata
+3. **Pratica**: Ambiente interattivo per esercitarsi con le domande generate
+4. **Report**: Visualizzazione e download dei report generati
+
+### Motore AI - CrewAI
+
+Il cuore dell'applicazione è basato su CrewAI, un framework che consente di creare "crew" di agenti AI specializzati che collaborano per completare compiti complessi:
+
+#### Agenti
+
+1. **Research Agent**: Specializzato nella ricerca di informazioni sull'azienda e sull'intervistatore
+
+   - Utilizza strumenti come SerperDevTool e ScrapeWebsiteTool per raccogliere dati aggiornati
+
+2. **Interview Coach**: Esperto in preparazione ai colloqui per specifici settori
+
+   - Genera domande personalizzate e fornisce feedback dettagliato
+
+3. **Interview Agent**: Simula un intervistatore reale
+   - Pone domande e valuta le risposte
+
+#### Task Flow
+
+Il flusso di lavoro dell'applicazione segue questi passaggi principali:
+
+1. **Fase di Ricerca**:
+
+   - L'utente inserisce informazioni sull'azienda, sulla posizione e sul settore
+   - Il Research Agent conduce ricerche approfondite sull'azienda target
+   - Il Research Agent raccoglie informazioni sull'intervistatore, se disponibili
+   - L'Interview Coach genera domande personalizzate basate sui risultati della ricerca
+
+2. **Fase di Pratica**:
+   - L'utente si esercita rispondendo alle domande generate
+   - L'Interview Coach fornisce feedback dettagliato sulle risposte
+   - Le risposte e i feedback vengono salvati per riferimento futuro
+
+```mermaid
+graph TB
+    A[Utente inserisce informazioni] --> B[Research Agent: Ricerca azienda]
+    A --> C[Research Agent: Ricerca intervistatore]
+    B --> D[Interview Coach: Genera domande]
+    C --> D
+    D --> E[Interview Agent: Pone domande all'utente]
+    E --> F[Utente risponde alle domande]
+    F --> G[Interview Coach: Fornisce feedback]
+    G --> H[Salvataggio risultati]
+    H --> I[Generazione report completo]
 ```
 
-Next, navigate to your project directory and install the dependencies:
+## Implementazione Tecnica
 
-(Optional) Lock the dependencies and install them by using the CLI command:
-```bash
-crewai install
+### Struttura del Progetto
+
 ```
-### Customizing
-
-**Add your `OPENAI_API_KEY` into the `.env` file**
-
-- Modify `src/interview_prep/config/agents.yaml` to define your agents
-- Modify `src/interview_prep/config/tasks.yaml` to define your tasks
-- Modify `src/interview_prep/crew.py` to add your own logic, tools and specific args
-- Modify `src/interview_prep/main.py` to add custom inputs for your agents and tasks
-
-## Running the Project
-
-To kickstart your crew of AI agents and begin task execution, run this from the root folder of your project:
-
-```bash
-$ crewai run
+interview_prep/
+├── src/
+│   └── interview_prep/
+│       ├── __init__.py
+│       ├── crew.py               # Definizioni CrewAI
+│       ├── config/
+│       │   ├── agents.yaml       # Configurazione agenti
+│       │   └── tasks.yaml        # Definizione task
+│       └── utils/
+│           └── interview_manager.py  # Gestione file e sessioni
+├── app.py                        # Applicazione Streamlit
+├── main.py                       # Interfaccia CLI alternativa
+└── setup.py                      # Configurazione pacchetto
 ```
 
-This command initializes the interview-prep Crew, assembling the agents and assigning them tasks as defined in your configuration.
+### Componenti Chiave
 
-This example, unmodified, will run the create a `report.md` file with the output of a research on LLMs in the root folder.
+1. **InterviewPrepCrew (crew.py)**:
 
-## Understanding Your Crew
+   - Implementa la classe `@CrewBase` che configura e orchestra gli agenti AI
+   - Definisce metodi specializzati per diversi scenari (ricerca, feedback, ecc.)
+   - Gestisce gli strumenti di ricerca e l'integrazione con API esterne
 
-The interview-prep Crew is composed of multiple AI agents, each with unique roles, goals, and tools. These agents collaborate on a series of tasks, defined in `config/tasks.yaml`, leveraging their collective skills to achieve complex objectives. The `config/agents.yaml` file outlines the capabilities and configurations of each agent in your crew.
+2. **InterviewManager (utils/interview_manager.py)**:
 
-## Support
+   - Gestisce il salvataggio e il caricamento dei file generati
+   - Mantiene lo stato delle domande e delle sessioni
+   - Fornisce funzioni di utilità per la sanitizzazione degli input
 
-For support, questions, or feedback regarding the InterviewPrep Crew or crewAI.
-- Visit our [documentation](https://docs.crewai.com)
-- Reach out to us through our [GitHub repository](https://github.com/joaomdmoura/crewai)
-- [Join our Discord](https://discord.com/invite/X4JWnZnxPb)
-- [Chat with our docs](https://chatg.pt/DWjSBZn)
+3. **Streamlit App (app.py)**:
+   - Implementa l'interfaccia utente interattiva
+   - Gestisce la sessione utente e il flusso dell'applicazione
+   - Coordina l'interazione tra l'utente e il backend CrewAI
 
-Let's create wonders together with the power and simplicity of crewAI.
+## Installazione e Configurazione
+
+### Prerequisiti
+
+- Python 3.10 o superiore
+- Account API per OpenAI
+- Account API per Serper (opzionale, per ricerche web avanzate)
+
+### Installazione
+
+1. Clona il repository:
+
+```bash
+git clone https://github.com/Pandagan-85/ai-agent-creaai
+cd interview_prep
+```
+
+2. Installa le dipendenze:
+
+```bash
+pip install -e .
+```
+
+3. Crea un file `.env` nella directory principale con le tue chiavi API:
+
+```
+OPENAI_API_KEY=your_openai_api_key
+SERPER_API_KEY=your_serper_api_key
+```
+
+### Avvio dell'Applicazione
+
+**Interfaccia Web (Streamlit)**:
+
+```bash
+streamlit run app.py
+```
+
+**Interfaccia CLI**:
+
+```bash
+python main.py
+```
+
+## Personalizzazione
+
+### Modifica degli Agenti
+
+Per personalizzare gli agenti, modifica i file nella directory `config/`:
+
+- `agents.yaml`: Modifica ruoli, obiettivi e backstory degli agenti
+- `tasks.yaml`: Personalizza le istruzioni per i task specifici
+
+### Estensione delle Funzionalità
+
+Per aggiungere nuove funzionalità:
+
+1. Aggiungi nuovi agenti in `crew.py` usando il decoratore `@agent`
+2. Implementa nuovi task con il decoratore `@task`
+3. Aggiorna l'interfaccia utente in `app.py` per interagire con i nuovi componenti
+
+## Considerazioni sulla Privacy
+
+- Tutti i dati utente vengono elaborati localmente
+- L'applicazione può essere configurata per eliminare automaticamente i dati tra sessioni
+- Le API esterne utilizzate sono soggette alle loro rispettive politiche sulla privacy
+
+## Conclusione
+
+L'AI Interview Preparation Assistant dimostra come combinare l'interfaccia utente intuitiva di Streamlit con la potenza dell'orchestrazione di agenti AI attraverso CrewAI. Questo approccio permette di creare applicazioni complesse che possono adattarsi a diversi contesti e fornire un'esperienza utente personalizzata.
+
+Il flusso di lavoro modulare e l'architettura flessibile consentono facili estensioni e personalizzazioni, rendendo questo progetto un ottimo punto di partenza per sviluppare applicazioni AI avanzate per vari domini.

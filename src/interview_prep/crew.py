@@ -9,8 +9,20 @@ from crewai_tools import SerperDevTool, ScrapeWebsiteTool
 class InterviewPrepCrew():
     """Crew for preparing for job interviews"""
 
+    # Mantieni le annotazioni di tipo per il decoratore @CrewBase
     agents: List[BaseAgent]
     tasks: List[Task]
+
+    def __init__(self):
+        super().__init__()
+        # Questo viene fatto nel decoratore ma assicuriamoci che sia inizializzato
+        if not hasattr(self, 'agents'):
+            self.agents = []
+        if not hasattr(self, 'tasks'):
+            self.tasks = []
+        # Debug
+        print(
+            f"InterviewPrepCrew inizializzato con {len(self.agents)} agenti e {len(self.tasks)} task")
 
     @agent
     def research_agent(self) -> Agent:
@@ -59,8 +71,14 @@ class InterviewPrepCrew():
     @task
     def define_questions_task(self) -> Task:
         """Create a task to define interview questions."""
+        task_config = self.tasks_config['define_questions_task'].copy()
+
+        # Rimuovi l'output_file dalla configurazione se presente
+        if 'output_file' in task_config:
+            del task_config['output_file']
+
         return Task(
-            config=self.tasks_config['define_questions_task'],
+            config=task_config,
             context=[self.research_company_task(), self.research_person_task()]
         )
 
@@ -83,9 +101,71 @@ class InterviewPrepCrew():
     @crew
     def crew(self) -> Crew:
         """Creates the Interview Preparation crew"""
+        # Assicurati che agenti e task siano inizializzati
+        if not self.agents or len(self.agents) == 0:
+            self.agents = [self.research_agent(
+            ), self.interview_coach(), self.interview_agent()]
+
         return Crew(
             agents=self.agents,
             tasks=self.tasks,
+            process=Process.sequential,
+            verbose=True,
+        )
+
+    def research_crew(self) -> Crew:
+        """Creates a crew specifically for research and question generation"""
+        # Assicurati che gli agenti siano stati inizializzati
+        if not self.agents or len(self.agents) == 0:
+            self.agents = [self.research_agent(
+            ), self.interview_coach(), self.interview_agent()]
+
+        research_tasks = [
+            self.research_company_task(),
+            self.research_person_task(),
+            self.define_questions_task()
+        ]
+
+        return Crew(
+            agents=self.agents,
+            tasks=research_tasks,
+            process=Process.sequential,
+            verbose=True,
+        )
+
+    def practice_crew(self) -> Crew:
+        """Creates a crew specifically for interview practice"""
+        # Assicurati che gli agenti siano stati inizializzati
+        if not self.agents or len(self.agents) == 0:
+            self.agents = [self.research_agent(
+            ), self.interview_coach(), self.interview_agent()]
+
+        practice_tasks = [
+            self.interview_prep_task(),
+            self.feedback_task()
+        ]
+
+        return Crew(
+            agents=self.agents,
+            tasks=practice_tasks,
+            process=Process.sequential,
+            verbose=True,
+        )
+
+    def feedback_crew(self) -> Crew:
+        """Creates a crew specifically for feedback generation"""
+        # Assicurati che gli agenti siano stati inizializzati
+        if not self.agents or len(self.agents) == 0:
+            self.agents = [self.research_agent(
+            ), self.interview_coach(), self.interview_agent()]
+
+        feedback_tasks = [
+            self.feedback_task()
+        ]
+
+        return Crew(
+            agents=self.agents,
+            tasks=feedback_tasks,
             process=Process.sequential,
             verbose=True,
         )
