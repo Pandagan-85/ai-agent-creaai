@@ -29,7 +29,7 @@ if 'session_id' not in st.session_state:
 
 # IMPORTANTE: set_page_config MUST be the first Streamlit instruction
 st.set_page_config(
-    page_title="AI Interview Preparation",
+    page_title="Assistente AI per la Preparazione ai Colloqui",
     page_icon="🎯",
     layout="wide"
 )
@@ -200,7 +200,7 @@ if os.path.exists(src_path) and src_path not in sys.path:
 # Ora facciamo gli import DOPO set_page_config e setup path
 try:
     from src.interview_prep.crew import InterviewPrepCrew
-    st.success("Import riuscito con percorso src.interview_prep")
+    # st.success("Import riuscito con percorso src.interview_prep")
 except ImportError as e:
     try:
         # Try direct import if package is installed
@@ -261,7 +261,7 @@ def load_questions(job_position):
         st.write(f"Trovate {len(manager.questions)} domande")
         return manager.questions
     else:
-        st.warning(f"No question files found for {job_position}")
+        st.warning(f"Nessun file per le domande trovato per {job_position}")
         st.write("Files disponibili nella directory della sessione:")
         # Elenca i file nella directory della sessione
         st.code(os.listdir(get_session_path()))
@@ -431,7 +431,7 @@ def get_feedback(company, interviewer, job_position, industry, question, answer)
 
 def main():
     """Main Streamlit application."""
-    st.title("AI Interview Preparation Assistant")
+    st.title("Assistente AI per la Preparazione ai Colloqui")
 
     # MODIFICA: Esegui la pulizia solo al primo avvio dell'app, non ad ogni refresh
     if 'app_initialized' not in st.session_state:
@@ -455,11 +455,13 @@ def main():
     #         except Exception as e:
     #             st.error(f"Error loading session: {e}")
 
-    st.sidebar.title("Navigation")
+    st.sidebar.title("Navigazione")
     page = st.sidebar.radio(
-        "Select a page:", ["Welcome", "Research", "Practice", "Reports"])
+        "Seleziona una pagina:", ["Benvenuto", "Ricerca", "Pratica", "Reports"])
     st.sidebar.markdown("---")
     st.sidebar.subheader("Data Management")
+    st.sidebar.markdown(
+        "A fine sessione usa il pulsante **clear data** per eliminare i dati della tua sessione")
 
     if st.sidebar.button("Clear Data"):
         # Pulisci tutti i file di output
@@ -483,7 +485,7 @@ def main():
 
         st.rerun()
 
-    if page == "Welcome":
+    if page == "Benvenuto":
         st.write("## Benvenuto all'Assistente AI per la Preparazione ai Colloqui!")
         st.write("""
         Questa applicazione ti aiuta a prepararti per i colloqui di lavoro:
@@ -491,6 +493,7 @@ def main():
         1. **Ricercando** l'azienda e l'intervistatore
         2. **Generando** domande personalizzate per il colloquio
         3. **Esercitandoti** con le tue risposte e ricevendo feedback dall'AI
+        4. **Scarica il documento** con le tue risposte e feedback
 
         Per iniziare, seleziona 'Ricerca' dal menu di navigazione per generare
         domande specifiche per la tua posizione lavorativa.
@@ -523,39 +526,41 @@ def main():
                     report_files.append(file)
 
         if not report_files:
-            st.warning("No reports found. Please run the Research phase first.")
+            st.warning(
+                "Nessun report trovato. Per favore torna alla prima fase di ricerca.")
         else:
             selected_report = st.selectbox(
-                "Select a report to view:", report_files)
+                "Seleziona un report da visionare:", report_files)
             if selected_report:
                 file_path = os.path.join(session_dir, selected_report)
                 with open(file_path, "r", encoding="utf-8") as f:
                     content = f.read()
                 st.markdown(content)
                 st.download_button(
-                    label="Download this report",
+                    label="Scarica questo report",
                     data=content,
                     file_name=selected_report,
                     mime="text/markdown"
                 )
 
-    elif page == "Research":
-        st.write("## Research Phase")
-        st.write("Enter information about the position you're applying for:")
+    elif page == "Ricerca":
+        st.write("## Fase di ricerca")
+        st.write(
+            "Inserisci le informazioni sulla posizione per cui vuoi fare il colloquio:")
         with st.form("research_form"):
-            company = st.text_input("Company Name", value=st.session_state.get(
-                'company', ''), help="Enter the name of the company you're applying to")
-            interviewer = st.text_input("Interviewer Name", value=st.session_state.get(
-                'interviewer', ''), help="Enter the name of the interviewer if known")
+            company = st.text_input("Nome Azienda", value=st.session_state.get(
+                'company', ''), help="Inserisci il nome dell'azienda")
+            interviewer = st.text_input("Nome di chi ti farà l'intervista", value=st.session_state.get(
+                'interviewer', ''), help="Inserisci il nome di chi ti farà l'intervista")
             job_position = st.text_input("Job Position", value=st.session_state.get(
-                'job_position', ''), help="Enter the specific job position you're applying for")
+                'job_position', ''), help="Inserisci la specifica job position")
             industry = st.text_input("Industry", value=st.session_state.get(
-                'industry', ''), help="Enter the industry or sector of the company")
+                'industry', ''), help="Inserisci l'industry o il settore dell'azienda")
             country = st.text_input(
-                "Country", value="Italy", help="Enter the country where the job is located")
+                "Country", value="Italy", help="Inserisci il country in cui si trova l'azienda")
             job_description = st.text_area(
-                "Job Description", value="", height=300, help="Paste the complete job description here")
-            submit_research = st.form_submit_button("Generate Questions")
+                "Job Description", value="", height=300, help="Incolla qui la job description completa")
+            submit_research = st.form_submit_button("Genera le Domande")
 
         if submit_research:
             # Sanitize all inputs before processing
@@ -568,7 +573,7 @@ def main():
 
             if not company or not job_position or not industry or not job_description:
                 st.error(
-                    "Please fill in all required fields: Company, Job Position, Industry, and Job Description.")
+                    "Per favore compila tutti i campi richiesti: Nome Azienda, Job Position, Industry, and Job Description.")
             else:
                 # Salva le info inserite nella sessione per usarle dopo nel feedback
                 st.session_state['company'] = company
@@ -595,27 +600,27 @@ def main():
                     st.success(
                         f"Ricerca completata! Generate {num_questions} domande per il colloquio.")
                     st.write(
-                        "Vai alla pagina 'Practise' per iniziare ad esercitarti con queste domande.")
+                        "Vai alla pagina 'Pratica' per iniziare ad esercitarti con queste domande.")
                 else:
                     st.error(
                         "Impossibile generare domande. Controlla i log o riprova con informazioni più dettagliate.")
 
-    elif page == "Practice":
-        st.write("## Practice Phase")
+    elif page == "Pratica":
+        st.write("## Fase di Pratica")
         if not st.session_state.questions:
             st.warning(
-                "No questions loaded. Please load existing questions or run the Research phase first.")
+                "Nessuna domanda caricata. Per favore carica delle domande esistenti o torna alla fase di ricerca per generarne di nuove")
             job_pos_load = st.text_input("Job Position", value=st.session_state.get(
-                'job_position', ''), help="Enter the job position to load questions for")
+                'job_position', ''), help="Inserisci la job position per cui caricare le domande")
 
-            if st.button("Load Existing Questions") and job_pos_load:
+            if st.button("Sto caricando le domande esistenti") and job_pos_load:
                 # Sanitize input
                 job_pos_load = sanitize_input(job_pos_load)
 
                 st.session_state.questions = load_questions(job_pos_load)
                 if st.session_state.questions:
                     st.success(
-                        f"Loaded {len(st.session_state.questions)} questions for {job_pos_load}!")
+                        f"Caricate {len(st.session_state.questions)} domande per {job_pos_load}!")
                     # Carica anche gli altri dettagli se non presenti
                     if 'company' not in st.session_state:
                         st.session_state['company'] = "Unknown"  # Placeholder
@@ -628,13 +633,13 @@ def main():
                     st.rerun()
                 else:
                     st.error(
-                        f"No questions found for {job_pos_load}. Please run the Research phase first.")
+                        f"Nessuna domanda trovata per {job_pos_load}. Per favore torna alla fase di ricerca")
             return
 
-        st.write("### Interview Practice")
+        st.write("### Pratica per l'intevista")
         remaining = max(0, MAX_PRACTICE_QUESTIONS -
                         (st.session_state.question_number - 1))
-        st.write(f"Questions remaining in this session: {remaining}")
+        st.write(f"Domande rimanenti in questa sessione: {remaining}")
 
         if not st.session_state.current_question:
             st.session_state.current_question = get_random_question()
@@ -642,32 +647,33 @@ def main():
         if not st.session_state.current_question:
             if len(st.session_state.asked_questions) >= len(st.session_state.questions):
                 st.info(
-                    "You've answered all available questions! Generate new ones in the Research phase or restart the session.")
-                if st.button("Restart Practice Session"):
+                    "Hai risposto a tutte le domande disponibili per questa sessione! Generane di nuove nella fase di ricerca o ricomincia una nuova sessione")
+                if st.button("Ricomincia la sessione di Pratica"):
                     st.session_state.asked_questions = set()
                     st.session_state.question_number = 1
                     st.session_state.current_question = None
                     st.session_state.feedback = ""
                     st.rerun()
             else:
-                st.warning("Could not get a new question. Trying again...")
+                st.warning(
+                    "Non sono riuscito a ottenere una nuova domanda. Provo di nuovo...")
                 time.sleep(1)  # Piccola pausa
                 st.rerun()
             return
 
         st.markdown(
-            f"### Question {st.session_state.question_number}:\n**{st.session_state.current_question}**")
+            f"### Domanda {st.session_state.question_number}:\n**{st.session_state.current_question}**")
 
         with st.form("answer_form"):
-            answer = st.text_area("Your Answer", value="", height=200)
-            submit_answer = st.form_submit_button("Submit Answer")
+            answer = st.text_area("La tua risposta", value="", height=200)
+            submit_answer = st.form_submit_button("Invia Risposta")
 
         if submit_answer:
             # Sanitize the answer input
             answer = sanitize_input(answer)
 
             if not answer:
-                st.error("Please provide an answer before submitting.")
+                st.error("Per favore dai una risposta prima di inviare.")
             else:
                 # Assicurati che i dettagli necessari per il feedback siano presenti
                 company = st.session_state.get('company', 'Unknown Company')
@@ -694,7 +700,7 @@ def main():
                 st.rerun()
 
         if st.session_state.feedback:
-            st.write("### Feedback on Your Previous Answer")
+            st.write("### Feedback sulla tua risposta precedente")
             st.markdown(st.session_state.feedback)
 
             # Create columns for the buttons
@@ -727,9 +733,9 @@ def main():
                     )
 
             # Determine if we're at the last question
-            next_button_label = "Next Question"
+            next_button_label = "Prossima Domanda"
             if st.session_state.question_number > MAX_PRACTICE_QUESTIONS:
-                next_button_label = "Finish Practice Session"
+                next_button_label = "Concludi la sessione di Pratica"
 
             with col2:
                 if st.button(next_button_label, key="next_question"):
