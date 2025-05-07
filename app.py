@@ -696,26 +696,86 @@ def main():
         if st.session_state.feedback:
             st.write("### Feedback on Your Previous Answer")
             st.markdown(st.session_state.feedback)
-            st.download_button(
-                label="Download Feedback",
-                data=st.session_state.feedback,
-                file_name=f"feedback_question_{st.session_state.question_number-1}.md",
-                mime="text/markdown"
-            )
 
-            # Bottone "Next Question" o "Finish Session"
+            # Create columns for the buttons
+            col1, col2 = st.columns(2)
+
+            with col1:
+                # Get the path to the saved feedback file
+                feedback_file = os.path.join(
+                    get_session_path(),
+                    "feedback",
+                    f"question_{st.session_state.question_number-1}_feedback.md"
+                )
+
+                if os.path.exists(feedback_file):
+                    with open(feedback_file, 'r', encoding='utf-8') as f:
+                        formatted_feedback = f.read()
+
+                    st.download_button(
+                        label="Download Feedback",
+                        data=formatted_feedback,
+                        file_name=f"feedback_question_{st.session_state.question_number-1}.md",
+                        mime="text/markdown"
+                    )
+                else:
+                    st.download_button(
+                        label="Download Feedback",
+                        data=st.session_state.feedback,
+                        file_name=f"feedback_question_{st.session_state.question_number-1}.md",
+                        mime="text/markdown"
+                    )
+
+            # Determine if we're at the last question
             next_button_label = "Next Question"
             if st.session_state.question_number > MAX_PRACTICE_QUESTIONS:
                 next_button_label = "Finish Practice Session"
 
-            if st.button(next_button_label, key="next_question"):
-                st.session_state.feedback = ""
+            with col2:
+                if st.button(next_button_label, key="next_question"):
+                    st.session_state.feedback = ""
+                    st.session_state.current_question = None
+
+                    # If this was the last question, generate summary feedback
+                    if st.session_state.question_number > MAX_PRACTICE_QUESTIONS:
+                        # Generate summary feedback
+                        manager = st.session_state.interview_manager
+                        summary_path = manager.generate_feedback_summary()
+
+                        # Check if summary was created successfully
+                        if summary_path and os.path.exists(summary_path):
+                            # We'll show the summary on the next page load
+                            st.session_state.show_summary = True
+
+                    st.rerun()
+         # Check if we should show the summary
+    if st.session_state.get('show_summary', False):
+        st.session_state.show_summary = False  # Reset flag
+
+        # Get the summary file
+        feedback_dir = os.path.join(get_session_path(), "feedback")
+        summary_file = os.path.join(feedback_dir, "feedback_summary.md")
+
+        if os.path.exists(summary_file):
+            with open(summary_file, 'r', encoding='utf-8') as f:
+                summary_content = f.read()
+
+            st.write("## Riepilogo Completo del Feedback")
+            st.markdown(summary_content)
+
+            st.download_button(
+                label="Scarica il Riepilogo Completo",
+                data=summary_content,
+                file_name="riepilogo_feedback_colloquio.md",
+                mime="text/markdown"
+            )
+
+            # Add a button to restart practice
+            if st.button("Inizia una Nuova Sessione"):
+                st.session_state.asked_questions = set()
+                st.session_state.question_number = 1
                 st.session_state.current_question = None
-                if st.session_state.question_number > MAX_PRACTICE_QUESTIONS:
-                    st.success(
-                        "Congratulations! You've completed the practice session.")
-                    st.session_state.question_number = 1  # Reset for next session
-                    st.session_state.asked_questions = set()  # Reset for next session
+                st.session_state.feedback = ""
                 st.rerun()
 
 

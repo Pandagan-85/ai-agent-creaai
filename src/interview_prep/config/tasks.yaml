@@ -36,12 +36,15 @@ research_person_task:
 
 define_questions_task:
   description: >
-    Definisci un elenco di domande in lingua italiana basate sull'azienda {company}, sulla descrizione del lavoro {job_description}, 
+    Definisci un elenco di domande in lingua italiana che un intervistatore dell'azienda {company} potrebbe fare ad un candidato per la posizione di {job_description}. Queste domande devono essere quelle che l'azienda farebbe al candidato durante un colloquio, NON domande che il candidato farebbe all'azienda.
+    Basati sulla ricerca su {company}, sulla descrizione del lavoro {job_description}, 
     sull'intervistatore {interviewer} e considerando il contesto culturale di {country}.
     Considera le pratiche aziendali locali e le aspettative culturali in {country}.
   expected_output: >
-    Un elenco di 20 domande in formato Markdown che coprano: Cultura e adattamento al Team, Adattamento alla Posizione di Lavoro, 
+    Un elenco di 20 domande che l'intervistatore potrebbe fare al candidato durante il colloquio, in formato Markdown. 
+    Le domande dovrebbero coprire: Cultura e adattamento al Team, Adattamento alla Posizione di Lavoro, 
     Background e modalità di lavoro, Mentalità di Crescita e qualsiasi considerazione specifica del paese rilevante per {country}.
+    Queste devono essere domande che l'AZIENDA farebbe AL CANDIDATO, non viceversa.
   agent: interview_coach
   context:
     - research_company_task

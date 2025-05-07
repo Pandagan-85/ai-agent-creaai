@@ -164,10 +164,111 @@ class InterviewManager:
         file_path = os.path.join(feedback_dir, file_name)
 
         with open(file_path, 'w', encoding='utf-8') as f:
-            f.write(f"# Question {question_num}\n\n")
-            f.write(f"**Question:** {question}\n\n")
-            f.write(f"**Your Answer:**\n\n{answer}\n\n")
-            f.write(f"**Feedback:**\n\n{feedback}\n")
+            # Title includes the actual question
+            f.write(f"# Domanda {question_num}: {question}\n\n")
+            f.write(f"**La tua risposta:**\n\n{answer}\n\n")
+
+            # Process the feedback based on its format
+            if feedback.startswith("1."):
+                # If feedback is in a numbered list format (1., 2., etc.)
+                import re
+                sections = re.split(r'\d+\.\s+', feedback)
+
+                # Remove empty first section if it exists
+                if sections and not sections[0].strip():
+                    sections = sections[1:]
+
+                # Map the sections to appropriate headers
+                section_titles = [
+                    "Punti di forza",
+                    "Aree di miglioramento",
+                    "Suggerimenti specifici",
+                    "Approcci alternativi"
+                ]
+
+                f.write("## Feedback\n\n")
+
+                # Write each section with appropriate header
+                for i, (title, content) in enumerate(zip(section_titles, sections)):
+                    if content.strip():
+                        f.write(f"### {title}\n")
+                        f.write(content.strip() + "\n\n")
+            else:
+                # If feedback is already structured or in a different format, keep it as is
+                f.write(f"## Feedback\n\n{feedback}\n")
 
         print(f"Feedback saved to {file_path}")
         return file_path
+
+    def generate_feedback_summary(self) -> str:
+        """Generate a summary of all feedback files.
+
+        Returns:
+            str: Path to the generated summary file
+        """
+        feedback_dir = os.path.join(self.output_dir, "feedback")
+        summary_file = os.path.join(feedback_dir, "feedback_summary.md")
+
+        if not os.path.exists(feedback_dir):
+            print(f"Feedback directory not found: {feedback_dir}")
+            return None
+
+        # Get all question feedback files
+        feedback_files = []
+        for file in os.listdir(feedback_dir):
+            if file.startswith("question_") and file.endswith("_feedback.md"):
+                feedback_files.append(file)
+
+        if not feedback_files:
+            print("No feedback files found to summarize")
+            return None
+
+        # Sort files by question number
+        feedback_files.sort(key=lambda x: int(x.split('_')[1]))
+
+        # Write the summary file
+        with open(summary_file, 'w', encoding='utf-8') as f:
+            # Header
+            f.write("# Riepilogo del Feedback - Simulazione di Colloquio\n\n")
+
+            # Table of contents
+            f.write("## Indice\n\n")
+            for i, file in enumerate(feedback_files):
+                # Extract question from filename
+                with open(os.path.join(feedback_dir, file), 'r', encoding='utf-8') as qf:
+                    first_line = qf.readline().strip()
+                    if first_line.startswith("# Domanda"):
+                        question = first_line[first_line.find(":")+1:].strip()
+                    else:
+                        question = f"Domanda {i+1}"
+
+                # Create TOC entry with link
+                f.write(f"{i+1}. [{question}](#domanda-{i+1})\n")
+
+            f.write("\n---\n\n")
+
+            # Compile all feedback
+            for i, file in enumerate(feedback_files):
+                file_path = os.path.join(feedback_dir, file)
+
+                with open(file_path, 'r', encoding='utf-8') as qf:
+                    content = qf.read()
+
+                # Add anchor for the TOC link
+                f.write(f"<a id='domanda-{i+1}'></a>\n")
+                f.write(content)
+                f.write("\n\n---\n\n")
+
+            # Conclusion with general tips
+            f.write("## Considerazioni Finali\n\n")
+            f.write(
+                "Ecco alcuni suggerimenti generali per migliorare le tue risposte ai colloqui:\n\n")
+            f.write("1. **Usa il metodo STAR**: Struttura le tue risposte descrivendo la Situazione, il Task (compito), l'Azione che hai intrapreso e il Risultato ottenuto.\n\n")
+            f.write("2. **Preparati con esempi specifici**: Abbi pronti esempi concreti delle tue esperienze passate che dimostrino le competenze richieste.\n\n")
+            f.write("3. **Allineati con i valori dell'azienda**: Mostra come i tuoi valori personali e professionali si allineano con quelli dell'organizzazione.\n\n")
+            f.write("4. **Sii conciso ma completo**: Fornisci risposte che siano abbastanza dettagliate ma evita divagazioni non pertinenti.\n\n")
+            f.write(
+                "5. **Mostra entusiasmo**: Comunica la tua passione per il ruolo e la missione dell'azienda.\n")
+
+        print(f"Feedback summary generated at {summary_file}")
+        return summary_file
